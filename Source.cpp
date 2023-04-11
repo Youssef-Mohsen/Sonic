@@ -47,22 +47,20 @@ int main()
     sonic.player.setTextureRect(IntRect(48.87, 0, 48.87, 43));
 
 //out of structs
-    //ground
-    RectangleShape ground(Vector2f(1500, 80));
-    // blocks
-    RectangleShape block(Vector2f(200, 30));
+    
     
     //Textures
     Texture backgroundTexture;
     Texture spiketex;
     Texture walltex;
+    Texture Groundtex;
     
     //Loading from files
     backgroundTexture.loadFromFile("background.png");
     
     sonic.sonicTex.loadFromFile("sonic22.png");
     walltex.loadFromFile("Wall.png");
-   
+    Groundtex.loadFromFile("Wall.png");
    
    
     
@@ -70,18 +68,20 @@ int main()
     Sprite background;
    
     Sprite wall;
+    Sprite Ground;
     // set texture
     sonic.player.setTexture(sonic.sonicTex);
     background.setTexture(backgroundTexture);
     
     wall.setTexture(walltex);
+    Ground.setTexture(Groundtex);
     //set positions
    
     
     sonic.player.setPosition(250, 700);
-    ground.setPosition(200, 800);
-    block.setPosition(1000, 520);
-    wall.setPosition(1000, 510);
+    
+    wall.setPosition(1000, 520);
+    Ground.setPosition(200, 800);
     
     //scaling
     sonic.player.setScale(Vector2f(2.f, 2.f));
@@ -90,6 +90,7 @@ int main()
     sonic.RightColl.setSize(Vector2f(15.f, 70.f));
     
     wall.setScale(1.6, 1);
+    Ground.setScale(11.9, 2);
     
 
     //
@@ -129,41 +130,41 @@ int main()
         sonic.player.move(0, sonic.Velocity.y);
 
 
-        if (sonic.player.getGlobalBounds().intersects(ground.getGlobalBounds()))
+        if (sonic.player.getGlobalBounds().intersects(Ground.getGlobalBounds()))
         {
-            if ((sonic.player.getPosition().x >= ground.getPosition().x + 1550))
+            if ((sonic.player.getPosition().x >= Ground.getPosition().x + 1550))
             {
                 sonic.player.setPosition(sonic.player.getPosition().x + 15, sonic.player.getPosition().y);
                 isground = false;
 
             }
-            else if ((sonic.PlayerColl.getPosition().x + 40 <= ground.getPosition().x))
+            else if ((sonic.PlayerColl.getPosition().x + 40 <= Ground.getPosition().x))
             {
                 sonic.player.setPosition(sonic.player.getPosition().x - 15, sonic.player.getPosition().y);
                 isground = false;
             }
             else
             {
-                sonic.player.setPosition(sonic.player.getPosition().x, ground.getPosition().y - 80);
+                sonic.player.setPosition(sonic.player.getPosition().x, Ground.getPosition().y - 73);
                 sonic.Velocity.y = -0.01;
                 isground = true;
             }
 
         }
-        else if (sonic.player.getGlobalBounds().intersects(block.getGlobalBounds()))
+        else if (sonic.player.getGlobalBounds().intersects(wall.getGlobalBounds()))
         {
-            if ((sonic.player.getPosition().x >= block.getPosition().x + 260))
+            if ((sonic.player.getPosition().x >= wall.getPosition().x + 260))
             {
                 sonic.player.setPosition(sonic.player.getPosition().x + 15, sonic.player.getPosition().y );
 
 
             }
-            else if ((sonic.PlayerColl.getPosition().x + 40 <= block.getPosition().x))
+            else if ((sonic.PlayerColl.getPosition().x + 40 <= wall.getPosition().x))
             {
                 sonic.player.setPosition(sonic.player.getPosition().x - 15, sonic.player.getPosition().y );
 
             }
-            else if ((sonic.PlayerColl.getPosition().y > block.getPosition().y + 28))
+            else if ((sonic.PlayerColl.getPosition().y > wall.getPosition().y + 28))
             {
 
                 sonic.player.setPosition(sonic.player.getPosition().x, sonic.player.getPosition().y + (40));
@@ -172,7 +173,7 @@ int main()
             }
             else
             {
-                sonic.player.setPosition(sonic.player.getPosition().x, block.getPosition().y - 80);
+                sonic.player.setPosition(sonic.player.getPosition().x, wall.getPosition().y - 75);
                 sonic.Velocity.y = -0.01;
                 isground = true;
             }
@@ -313,9 +314,11 @@ int main()
         window.draw(background);
         
         window.draw(sonic.player);
-        window.draw(ground);
+        
+        window.draw(Ground);
+       
+        
         window.draw(wall);
-        window.draw(block);
         
        
        
