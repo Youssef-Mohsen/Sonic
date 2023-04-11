@@ -43,9 +43,7 @@ int main()
     ground.setPosition(200, 800);
     RectangleShape block(Vector2f(200, 30));
     block.setPosition(1000, 520);
-    //spikes
-   
-   //
+    
 
 
     //sonic
@@ -63,6 +61,8 @@ int main()
     sonic.LeftColl.setSize(Vector2f(15.f, 70.f));
     sonic.RightColl.setSize(Vector2f(15.f, 70.f));
     
+    
+    //
     while (window.isOpen())
     {
         gameclock.restart();
@@ -118,8 +118,7 @@ int main()
                     sonic.Velocity.y = -0.01;
                     isground = true;
                 }
-                sonic.Velocity.y = -0.01;
-                isground = true;
+               
             }
             else if (sonic.player.getGlobalBounds().intersects(block.getGlobalBounds()))
             {
@@ -137,7 +136,7 @@ int main()
                 else if ((sonic.PlayerColl.getPosition().y > block.getPosition().y + 30))
                 {
                     
-                    sonic.player.setPosition(sonic.player.getPosition().x , sonic.player.getPosition().y +(15));
+                    sonic.player.setPosition(sonic.player.getPosition().x , sonic.player.getPosition().y +(40));
                     
                 }
                 else
@@ -146,8 +145,7 @@ int main()
                     sonic.Velocity.y = -0.01;
                     isground = true;
                 }
-                sonic.Velocity.y = -0.01;
-                isground = true;
+               
             }
             else
             {
@@ -276,23 +274,21 @@ int main()
             sonic.LeftColl.setPosition(sonic.player.getPosition().x -70, sonic.player.getPosition().y + 30);
             sonic.RightColl.setPosition(sonic.player.getPosition().x -40, sonic.player.getPosition().y + 30);
             
-            //
+            //UPDATE
+
             window.clear();
-            //
+            
 
 
-
+           //DRAW
             window.draw(sonic.player);
-            
-            
-
-            
             window.draw(ground);
             window.draw(block);
+          
            
            
 
-            //
+            //DISPLAY
             window.display();
             deltatime = gameclock.getElapsedTime().asSeconds();
 
