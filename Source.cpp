@@ -29,12 +29,9 @@ int main()
 {
     // variables
     bool isdead = false;
-    
     bool isground = false;
     Clock gameclock;
-    
-   
-    
+
     float delay = 0.1f;
     float deltatime = 0;
     float timer = 0;
@@ -47,16 +44,16 @@ int main()
 
     RenderWindow window(VideoMode(1940, 1080), "Sonic.exe", Style::Default);
     window.setFramerateLimit(60);
-//structs
-    //sonic
+    //structs
+        //sonic
     player sonic;
     sonic.player.setTextureRect(IntRect(48.87, 0, 48.87, 43));
 
-//out of structs
+    //out of structs
     Vector2f Velocity;
-    
+
     //Textures
-    
+
     Texture spiketex;
     Texture walltex;
     Texture Groundtex;
@@ -65,8 +62,8 @@ int main()
     Texture ringTexture;
     Texture rockTexture;
 
-    
-    
+
+
     //Loading from files
     sonic.sonicTex.loadFromFile("sonic22.png");
     walltex.loadFromFile("Wall.png");
@@ -76,46 +73,45 @@ int main()
     groundTexture.loadFromFile("ground2.png");
     ringTexture.loadFromFile("ring.png");
     rockTexture.loadFromFile("rock.png");
-    
+
+
+
     //sprites
-    
+
     Sprite wall;
     Sprite Ground;
     Sprite spike;
     // set texture
     sonic.player.setTexture(sonic.sonicTex);
-    
-    
+
+
     wall.setTexture(walltex);
     Ground.setTexture(Groundtex);
     spike.setTexture(spiketex);
     //set positions
-   
-    
+
+
     sonic.player.setPosition(350, 700);
     spike.setPosition(1300, 910);
     wall.setPosition(1000, 630);
     Ground.setPosition(200, 800);
-    
-    
+
+
     //scaling
     sonic.player.setScale(Vector2f(2.f, 2.f));
     sonic.PlayerColl.setSize(Vector2f(45.f, 70.f));
     sonic.LeftColl.setSize(Vector2f(15.f, 70.f));
     sonic.RightColl.setSize(Vector2f(15.f, 70.f));
-    
+
     wall.setScale(1.6, 1);
     Ground.setScale(11.9, 2);
     spike.setScale(0.5, 0.3);
     //Background
-    Sprite background[15];
-    background[0].setTexture(backgroundTexture);
-    background[0].setPosition(Vector2f(-1920, 0));
-    for (int i = 1, j = 0; i <= 15; i++, j++)
-    {
-        background[i].setTexture(backgroundTexture);
-        background[i].setPosition(Vector2f((j * 1920), 0));
-    }
+    Sprite background;
+    background.setTexture(backgroundTexture);
+    background.setTextureRect(IntRect(0, 0, 1920*33.33333, 1080));
+    background.setPosition(Vector2f(-1000, 0));
+    backgroundTexture.setRepeated(15);
 
     //Rocks
     Sprite rock1;
@@ -131,21 +127,11 @@ int main()
     border1.setFillColor(Color::Transparent);
 
     //Ground
-    Sprite ground[1000];
-    //Ground Behind Sonic
-    for (int i = 0, j = -1; i < 8; i++, j--)
-    {
-        ground[i].setScale(Vector2f(2, 2));
-        ground[i].setTexture(groundTexture);
-        ground[i].setPosition(Vector2f((j * 256), 952));
-    }
-    //Ground Infront Of Sonic
-    for (int i = 8, j = 0; i < 100; i++, j++)
-    {
-        ground[i].setScale(Vector2f(2, 2));
-        ground[i].setTexture(groundTexture);
-        ground[i].setPosition(Vector2f((j * 256), 952));
-    }
+    Sprite ground;
+    ground.setTexture(groundTexture);
+    ground.setTextureRect(IntRect(0, 0, 128*500, 128));
+    ground.setPosition(-1000, 952);
+    groundTexture.setRepeated(15);
 
     //Rings
     Sprite ring[100];
@@ -167,28 +153,30 @@ int main()
     font.loadFromFile("font2.ttf");
     Text collector;
     collector.setFont(font);
-    collector.setString("Score: "+ to_string(score));
+    collector.setString("Score: " + to_string(score));
     collector.setPosition(-600, 100);
     collector.setCharacterSize(72);
-    collector.setFillColor( Color:: White);
+    collector.setFillColor(Color::White);
 
     //sounds
     SoundBuffer coinsoundbuffer;
     coinsoundbuffer.loadFromFile("coin.WAV");
     Sound coinsound;
     coinsound.setBuffer(coinsoundbuffer);
-//
+    //
     SoundBuffer jumpsoundbuffer;
     jumpsoundbuffer.loadFromFile("jump.WAV");
     Sound jumpsound;
     jumpsound.setBuffer(jumpsoundbuffer);
-//
+    //
     SoundBuffer deathsoundbuffer;
     deathsoundbuffer.loadFromFile("death2.WAV");
     Sound deathsound;
     deathsound.setBuffer(deathsoundbuffer);
 
     View cam(Vector2f(0.f, 0.f), Vector2f(1920.f, 1080.f));
+    
+    
     //
     while (window.isOpen())
     {
@@ -205,7 +193,7 @@ int main()
             }
             if (event.type == Event::KeyPressed)
             {
-                if ((event.key.code == Keyboard::Space) && isground  && !isdead)
+                if ((event.key.code == Keyboard::Space) && isground && !isdead)
                 {
                     sonic.Velocity.y = -30;
                     isground = false;
@@ -241,33 +229,33 @@ int main()
         {
             for (int i = 0; i < 65; i++)
             {
-                if (sonic.player.getGlobalBounds().intersects(ground[i].getGlobalBounds()))
+                //if sonic on the ground:
+                if (sonic.player.getGlobalBounds().intersects(ground.getGlobalBounds()))
                 {
-                    if ((sonic.player.getPosition().x >= ground[i].getPosition().x+20000 ))
-                    {
-                        
-
-                    }
-                    else if ((sonic.PlayerColl.getPosition().x + 40 <= ground[i].getPosition().x ))
-                    {
-                       
-                    }
+                    //if not:
+                    if ((sonic.player.getPosition().x >= ground.getPosition().x + 64000)){}
+                    else if ((sonic.PlayerColl.getPosition().x + 40 <= ground.getPosition().x)){}
+                   
+                    //then:
                     else
                     {
-                        sonic.player.setPosition(sonic.player.getPosition().x, ground[i].getPosition().y-75);
+                        sonic.player.setPosition(sonic.player.getPosition().x, ground.getPosition().y - 75);
                         sonic.Velocity.y = -0.01;
                         isground = true;
                     }
 
                 }
+                //if sonic is above the ground:
                 else
                 {
+                    //gravity:
                     sonic.Velocity.y += 0.02;
                 }
             }
-               
+
+
             
-             if (sonic.player.getGlobalBounds().intersects(wall.getGlobalBounds()))
+            if (sonic.player.getGlobalBounds().intersects(wall.getGlobalBounds()))
             {
 
                 if ((sonic.player.getPosition().x >= wall.getPosition().x + 240))
@@ -280,7 +268,7 @@ int main()
                 else if ((sonic.PlayerColl.getPosition().x + 15 <= wall.getPosition().x))
                 {
                     sonic.player.setPosition(sonic.player.getPosition().x - 15, sonic.player.getPosition().y);
-                    
+
                     collector.setPosition(collector.getPosition().x - 15, collector.getPosition().y);
                     isground = false;
                 }
@@ -301,11 +289,11 @@ int main()
 
             }
 
-            
+
 
 
             //jump animation
-            if (!isground  && !isdead)
+            if (!isground && !isdead)
             {
                 if (timer < 0)
                 {
@@ -325,10 +313,10 @@ int main()
             //player collision
             if (Keyboard::isKeyPressed(Keyboard::A))
             {
-                Velocity.x =-8 - acc;
-                sonic.Velocity.x = -8 - acc;
+                Velocity.x = -8 + acc;
+                sonic.Velocity.x = -8 + acc;
 
-                if (isground  && !isdead)
+                if (isground && !isdead)
                 {
                     if (timer < 0)
                     {
@@ -360,12 +348,12 @@ int main()
                     else
                         timer -= deltatime;
                 }
-               
-                
-                    sonic.player.setScale(-2, 2);
-                   
-                    sonic.player.setOrigin(0, 0);
-                   
+
+
+                sonic.player.setScale(-2, 2);
+
+                sonic.player.setOrigin(0, 0);
+
             }
 
 
@@ -405,16 +393,16 @@ int main()
                         timer -= deltatime;
                 }
 
-                
-                
-                    sonic.player.setScale(2, 2);
-                    
-                    sonic.player.setOrigin(sonic.player.getLocalBounds().width, 0);
-                    
 
-               
+
+                sonic.player.setScale(2, 2);
+
+                sonic.player.setOrigin(sonic.player.getLocalBounds().width, 0);
+
+
+
             }
-            if (isground  && !(Keyboard::isKeyPressed(Keyboard::D)) && !(Keyboard::isKeyPressed(Keyboard::A)) && !(Keyboard::isKeyPressed(Keyboard::Space)))
+            if (isground && !(Keyboard::isKeyPressed(Keyboard::D)) && !(Keyboard::isKeyPressed(Keyboard::A)) && !(Keyboard::isKeyPressed(Keyboard::Space)))
             {
                 if (timer < 0)
                 {
@@ -428,9 +416,9 @@ int main()
                     timer -= deltatime;
             }
 
-            if (sonic.PlayerColl.getGlobalBounds().intersects(spike.getGlobalBounds()) && isground )
+            if (sonic.PlayerColl.getGlobalBounds().intersects(spike.getGlobalBounds()) && isground)
             {
-               
+
                 if ((sonic.PlayerColl.getPosition().x >= spike.getPosition().x + 65))
                 {
                     isground = false;
@@ -448,7 +436,7 @@ int main()
                     deathsound.play();
 
                 }
-                else 
+                else
                 {
                     isground = false;
                     sonic.Velocity.y = -0.01;
@@ -459,16 +447,16 @@ int main()
 
             }
         }
-        if (isdead )
+        if (isdead)
         {
-           
+
             for (int deadanim = 6; deadanim <= 7; deadanim++)
             {
                 if (timer < 0)
                 {
                     sonic.Velocity.y += 1;
                     sonic.Velocity.x = 0;
-                    Velocity.x=0;
+                    Velocity.x = 0;
 
                     sonic.player.setTextureRect(IntRect((deadanim * 45.5), 4 * 55, 47, 50));
                     timer = 0.7;
@@ -476,18 +464,18 @@ int main()
                 else
                     timer -= deltatime;
             }
-            
+
         }
         if (sonic.player.getGlobalBounds().intersects(border1.getGlobalBounds()))
         {
-            sonic.player.setPosition(sonic.player.getPosition().x+15, sonic.player.getPosition().y);
+            sonic.player.setPosition(sonic.player.getPosition().x + 15, sonic.player.getPosition().y);
             collector.setPosition(collector.getPosition().x + 15, collector.getPosition().y);
         }
 
         //Rings Disappearing When Collision
         for (int i = 0; i < 22; i++)
         {
-            if (sonic.player.getGlobalBounds().intersects(ring[i].getGlobalBounds()) && !isdead )
+            if (sonic.player.getGlobalBounds().intersects(ring[i].getGlobalBounds()) && !isdead)
             {
                 ring[i].setScale(Vector2f(0, 0));
                 score++;
@@ -497,12 +485,12 @@ int main()
 
         //Rings Animation
         ringanimator++;
-        ringanimator %= 10;
+        ringanimator %= 10 * 4;
         for (int i = 0; i < 22; i++)
         {
-            ring[i].setTextureRect(IntRect((ringanimator * 64), 0, 64, 62));
+            ring[i].setTextureRect(IntRect((ringanimator / 4) * 64 , 0, 64, 62));
         }
-        if (sonic.PlayerColl.getPosition().y > window.getSize().y )
+        if (sonic.PlayerColl.getPosition().y > window.getSize().y)
         {
             sonic.player.setPosition(300, 720);
             collector.setPosition(-600, 100);
@@ -511,7 +499,7 @@ int main()
         }
 
 
-        collector.setString("Score: "+ to_string(score));
+        collector.setString("Score: " + to_string(score));
 
         // position of sonic collision
         sonic.PlayerColl.setPosition(sonic.player.getPosition().x - 70, sonic.player.getPosition().y + 10);
@@ -523,10 +511,8 @@ int main()
         //Draw
 
         window.draw(collector);
-        for (int i = 0; i <= 14; i++)
-            window.draw(background[i]);
-        for (int i = 0; i < 65; i++)
-            window.draw(ground[i]);
+        window.draw(background);
+        window.draw(ground);
         window.draw(border1);
         for (int i = 0; i < 22; i++)
             window.draw(ring[i]);
@@ -536,13 +522,13 @@ int main()
         window.draw(collector);
         window.draw(wall);
         window.draw(spike);
-       
+
         window.draw(collector);
-        
-        
-       
-       
-        
+
+
+
+
+
 
 
         //Display
