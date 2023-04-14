@@ -38,7 +38,7 @@ int main()
     float delay = 0.1f;
     float deltatime = 0;
     float timer = 0;
-   
+    float acc = 0;
     int animleft = 0;
     int animright = 0;
     int jumpanim = 0;
@@ -53,7 +53,7 @@ int main()
     sonic.player.setTextureRect(IntRect(48.87, 0, 48.87, 43));
 
 //out of structs
-   
+    Vector2f Velocity;
     
     //Textures
     
@@ -172,6 +172,22 @@ int main()
     collector.setCharacterSize(72);
     collector.setFillColor( Color:: White);
 
+    //sounds
+    SoundBuffer coinsoundbuffer;
+    coinsoundbuffer.loadFromFile("coin.WAV");
+    Sound coinsound;
+    coinsound.setBuffer(coinsoundbuffer);
+//
+    SoundBuffer jumpsoundbuffer;
+    jumpsoundbuffer.loadFromFile("jump.WAV");
+    Sound jumpsound;
+    jumpsound.setBuffer(jumpsoundbuffer);
+//
+    SoundBuffer deathsoundbuffer;
+    deathsoundbuffer.loadFromFile("death2.WAV");
+    Sound deathsound;
+    deathsound.setBuffer(deathsoundbuffer);
+
     View cam(Vector2f(0.f, 0.f), Vector2f(1920.f, 1080.f));
     //
     while (window.isOpen())
@@ -193,7 +209,7 @@ int main()
                 {
                     sonic.Velocity.y = -30;
                     isground = false;
-                   
+                    jumpsound.play();
                 }
 
 
@@ -205,17 +221,21 @@ int main()
                     animleft = 0;
 
                     sonic.Velocity.x = 0;
+                    Velocity.x = 0;
+                    acc = 0;
                 }
                 if ((event.key.code == Keyboard::D))
                 {
                     animright = 0;
                     sonic.Velocity.x = 0;
+                    Velocity.x = 0;
+                    acc = 0;
                 }
 
             }
         }
         sonic.player.move(sonic.Velocity.x, sonic.Velocity.y);
-
+        collector.move(Velocity.x, Velocity.y);
         // collision system and gravity system
         if (!isdead)
         {
@@ -255,12 +275,14 @@ int main()
                     sonic.player.setPosition(sonic.player.getPosition().x + 15, sonic.player.getPosition().y);
 
                     collector.setPosition(collector.getPosition().x + 15, collector.getPosition().y);
+                    isground = false;
                 }
                 else if ((sonic.PlayerColl.getPosition().x + 15 <= wall.getPosition().x))
                 {
                     sonic.player.setPosition(sonic.player.getPosition().x - 15, sonic.player.getPosition().y);
                     
                     collector.setPosition(collector.getPosition().x - 15, collector.getPosition().y);
+                    isground = false;
                 }
                 else if ((sonic.PlayerColl.getPosition().y > wall.getPosition().y + 28))
                 {
@@ -303,6 +325,8 @@ int main()
             //player collision
             if (Keyboard::isKeyPressed(Keyboard::A))
             {
+                Velocity.x =-8 - acc;
+                sonic.Velocity.x = -8 - acc;
 
                 if (isground  && !isdead)
                 {
@@ -319,7 +343,7 @@ int main()
                                 animleft = 17;
                                 animleft = animleft % 23;
                                 animleft++;
-                                sonic.Velocity.x -= 1.5;
+                                acc -= 0.5;
 
                                 sonic.player.setTextureRect(IntRect((animleft * 48.87), 1 * 59.4, 48.87, 46));
                                 timer = delay;
@@ -330,7 +354,7 @@ int main()
                         else
                         {
                             sonic.player.setTextureRect(IntRect((animleft * 48.87), 1 * 59.4, 48.87, 46));
-                            timer = delay;
+                            timer = 0.07;
                         }
                     }
                     else
@@ -339,15 +363,16 @@ int main()
                
                 
                     sonic.player.setScale(-2, 2);
-                    sonic.Velocity.x = -5;
+                   
                     sonic.player.setOrigin(0, 0);
-                    collector.move(-5, 0);
+                   
             }
 
 
             if (Keyboard::isKeyPressed(Keyboard::D))
             {
-
+                sonic.Velocity.x = 8 + acc;
+                Velocity.x = 8 + acc;
                 if (isground && !isdead)
                 {
                     if (timer < 0)
@@ -362,10 +387,10 @@ int main()
                                 animright = 17;
                                 animright = animright % 23;
                                 animright++;
-                                sonic.Velocity.x = 10;
+                                acc += 1;
 
                                 sonic.player.setTextureRect(IntRect((animright * 48.87), 1 * 59.4, 48.87, 46));
-                                timer = delay;
+                                timer = 0.07;
                             }
                             else
                                 timer -= deltatime;
@@ -383,9 +408,9 @@ int main()
                 
                 
                     sonic.player.setScale(2, 2);
-                    sonic.Velocity.x = 5;
+                    
                     sonic.player.setOrigin(sonic.player.getLocalBounds().width, 0);
-                    collector.move(5, 0);
+                    
 
                
             }
@@ -403,43 +428,47 @@ int main()
                     timer -= deltatime;
             }
 
-            if (sonic.PlayerColl.getGlobalBounds().intersects(spike.getGlobalBounds()))
+            if (sonic.PlayerColl.getGlobalBounds().intersects(spike.getGlobalBounds()) && isground )
             {
-
+               
                 if ((sonic.PlayerColl.getPosition().x >= spike.getPosition().x + 65))
                 {
-
+                    isground = false;
                     sonic.player.setPosition(sonic.player.getPosition().x, sonic.player.getPosition().y - 200);
                     isdead = true;
+                    deathsound.play();
 
 
                 }
                 else if ((sonic.PlayerColl.getPosition().x + 38 <= spike.getPosition().x))
                 {
-
+                    isground = false;
                     sonic.player.setPosition(sonic.player.getPosition().x, sonic.player.getPosition().y - 200);
                     isdead = true;
-
+                    deathsound.play();
 
                 }
                 else 
                 {
-
+                    isground = false;
                     sonic.Velocity.y = -0.01;
                     sonic.player.setPosition(sonic.player.getPosition().x, sonic.player.getPosition().y - 200);
                     isdead = true;
+                    deathsound.play();
                 }
 
             }
         }
         if (isdead )
         {
+           
             for (int deadanim = 6; deadanim <= 7; deadanim++)
             {
                 if (timer < 0)
                 {
                     sonic.Velocity.y += 1;
                     sonic.Velocity.x = 0;
+                    Velocity.x=0;
 
                     sonic.player.setTextureRect(IntRect((deadanim * 45.5), 4 * 55, 47, 50));
                     timer = 0.7;
@@ -447,19 +476,22 @@ int main()
                 else
                     timer -= deltatime;
             }
+            
         }
         if (sonic.player.getGlobalBounds().intersects(border1.getGlobalBounds()))
         {
-            sonic.Velocity.x = 5;
+            sonic.player.setPosition(sonic.player.getPosition().x+15, sonic.player.getPosition().y);
+            collector.setPosition(collector.getPosition().x + 15, collector.getPosition().y);
         }
 
         //Rings Disappearing When Collision
         for (int i = 0; i < 22; i++)
         {
-            if (sonic.player.getGlobalBounds().intersects(ring[i].getGlobalBounds()))
+            if (sonic.player.getGlobalBounds().intersects(ring[i].getGlobalBounds()) && !isdead )
             {
                 ring[i].setScale(Vector2f(0, 0));
                 score++;
+                coinsound.play();
             }
         }
 
@@ -470,7 +502,7 @@ int main()
         {
             ring[i].setTextureRect(IntRect((ringanimator * 64), 0, 64, 62));
         }
-        if (sonic.PlayerColl.getPosition().y > window.getSize().y)
+        if (sonic.PlayerColl.getPosition().y > window.getSize().y )
         {
             sonic.player.setPosition(300, 720);
             collector.setPosition(-600, 100);
@@ -510,7 +542,7 @@ int main()
         
        
        
-
+        
 
 
         //Display
