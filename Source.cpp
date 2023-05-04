@@ -2,14 +2,12 @@
 #include <SFML/Audio.hpp>
 #include <SFML/System.hpp>
 #include <iostream>
-#include <string>
-#include <cstdlib>
-#include <ctime>
-#include <sstream>
-#include <cmath>
-#include <fstream>
 using namespace std;
 using namespace sf;
+
+
+
+//structs
 
 struct player
 {
@@ -17,39 +15,38 @@ struct player
     Sprite player;
     RectangleShape PlayerColl, LeftColl, RightColl;
     Vector2f Velocity;
-    int animright = 0, idleanim = 0, animleft = 0, jumpanim = 0,deadanim=0;
+    int animright = 0, idleanim = 0, animleft = 0, jumpanim = 0, deadanim = 0;
     float deathdelay = 0.3;
     int score = 0, lives = 5, FinalScore = 0;
     bool start = false, Running = false;
     bool isground = false, isdead = false, hitRight = false, hitLeft = false, RunningSound = false, HitAbove = false;
 };
 
-struct enemies1
+struct enemy
 {
-    Sprite crabs;
+    Sprite sprite;
     Vector2f Velocity;
     RectangleShape coll;
     int animright = 0, animleft = 0;
-    bool isdead =  false ,isground =false;
+    bool isdead = false, isground = false;
 };
 
-struct enemies2
-{
-    Texture enemiesTex2;
-    Sprite fish[100];
-    Vector2f Velocity;
-    int animup = 0;
-};
-void animate_stack(Sprite sprites[], int size, int num, int y, int width, int height, int& animationInd, int& delay);
-void animate_sprite(Sprite& sprite, int num, float y, float width, float height, int& animationInd, float& delay, float& deltatime, float& timer, int shift);
-void move_left(Sprite& sonic, Vector2f& sonicVelocity, Vector2f& Velocity,Vector2f& Velocity2, float& acc, int& animleft, float& deltatime, float& timer, bool isground, bool isdead);
+
+
+//functions
+
 void move_right(Sprite& sonic, Vector2f& sonicVelocity, Vector2f& Velocity, Vector2f& Velocity2, float& acc, int& animright, float& deltatime, float& timer, bool isground, bool isdead);
+void move_left(Sprite& sonic, Vector2f& sonicVelocity, Vector2f& Velocity, Vector2f& Velocity2, float& acc, int& animleft, float& deltatime, float& timer, bool isground, bool isdead);
+void animate_sprite(Sprite& sprite, int num, float y, float width, float height, int& animationInd, float& delay, float& deltatime, float& timer, int shift);
+void animate_struct_stack(struct enemy sprites[], int size, int num, int y, int width, int height, int& animationInd, int& delay);
 void animate_stack(Sprite sprites[], int size, int num, int y, int width, int height, int& animationInd, int& delay);
-void setGround(Sprite item[], int num, int width, int height, int x, int y);
 void construct(Sprite item[], int start, int amount, float x, int differenceX, int differenceY, float y);
-void enemierespawn(Sprite item[], RenderWindow& window, int x, int z, int start, int amount);
-void enemiepos(Sprite item[], int x, int z, int start, int amount);
+void enemierespawn(struct enemy sprite[], RenderWindow& window, int x, int z, int start, int amount);
+void setGround(Sprite item[], int num, int width, int height, int x, int y);
+void enemiepos(struct enemy sprite[], int x, int z, int start, int amount);
 void move_crab(Sprite crab, int num, bool isdead, Vector2f& velocity);
+
+
 int main()
 {
     // Variables
@@ -60,6 +57,10 @@ int main()
     float acc = 0;
     int ringanimator = 0;
     int ringdelay = 4;
+    int fishanimInd = 0;
+    int fishdelay = 6;
+    int crabanimInd = 0;
+    int crabdelay = 6;
     RenderWindow window(VideoMode(1940, 1080), "Sonic.exe", Style::Default);
     window.setFramerateLimit(60);
 
@@ -68,18 +69,18 @@ int main()
     player sonic;
     sonic.player.setTextureRect(IntRect(48.87, 0, 48.87, 43));
     //enemies
-    enemies1 crab[100];
-    enemies2 enemie2;
+    enemy crab[100];
+    enemy fish[100];
 
     for (int i = 0; i < 20; i++)
-        crab[i].crabs.setTextureRect(IntRect(48.5, 0 * 36, 46.5, 36));
+        crab[i].sprite.setTextureRect(IntRect(48.5, 0 * 36, 46.5, 36));
     for (int i = 0; i < 20; i++)
-        enemie2.fish[i].setTextureRect(IntRect(48.5, 0 * 36, 46.5, 36));
-    // Out Of Structs
+        fish[i].sprite.setTextureRect(IntRect(48.5, 0 * 36, 46.5, 36));
+
     // Velocities
     Vector2f Velocity;
     Vector2f Velocity2;
-   
+
     //Textures
     Texture spiketex;
     Texture platformtex;
@@ -92,9 +93,10 @@ int main()
     Texture liveTex;
     Texture treetex;
     Texture crabtex;
+    Texture fishtex;
     // Loading From Files
     crabtex.loadFromFile("Enemies1.png");
-    enemie2.enemiesTex2.loadFromFile("Enemies2.png");
+    fishtex.loadFromFile("Enemies2.png");
     sonic.sonicTex.loadFromFile("sonic22.png");
     platformtex.loadFromFile("Wall.png");
     spiketex.loadFromFile("Spike.png");
@@ -118,9 +120,9 @@ int main()
     // Setting Textures
     sonic.player.setTexture(sonic.sonicTex);
     for (int i = 0; i < 35; i++)
-        crab[i].crabs.setTexture(crabtex);
+        crab[i].sprite.setTexture(crabtex);
     for (int i = 0; i < 20; i++)
-        enemie2.fish[i].setTexture(enemie2.enemiesTex2);
+        fish[i].sprite.setTexture(fishtex);
     for (int i = 0; i < 5; i++)
     {
         lives[i].setTexture(liveTex);
@@ -182,36 +184,36 @@ int main()
     sonic.player.setPosition(250, 720);
     sonic.PlayerColl.setPosition(250, 720);
     // crabs pos
-    crab[0].crabs.setPosition(Vector2f(1000, 800));
-    crab[1].crabs.setPosition(Vector2f(4500, 800));
-    crab[2].crabs.setPosition(Vector2f(10500, 800));
-   // rest of crabs pos
+    crab[0].sprite.setPosition(Vector2f(1000, 800));
+    crab[1].sprite.setPosition(Vector2f(4500, 800));
+    crab[2].sprite.setPosition(Vector2f(10500, 800));
+    // rest of crabs pos
     for (int i = 3; i < 100; i++)
-        crab[i].crabs.setPosition(20000, 940);
-    
+        crab[i].sprite.setPosition(20000, 940);
+
     // fish pos
-    enemiepos(enemie2.fish, 2600, 360, 0, 3);
-    enemiepos(enemie2.fish, 6380, 360, 3, 7);
-    enemiepos(enemie2.fish, 11550, 490, 7, 13);
+    enemiepos(fish, 2600, 360, 0, 3);
+    enemiepos(fish, 6380, 360, 3, 7);
+    enemiepos(fish, 11550, 490, 7, 13);
     // rest of fishs pos
     for (int i = 13; i < 100; i++)
-        enemie2.fish[i].setPosition(-1000, 0);
+        fish[i].sprite.setPosition(-1000, 0);
     // window y pos
     windowy.setPosition(0, 1000);
     // Ground Position
     Ground.setPosition(200, 800);
-    
+
     for (int i = 0, j = 63; i < 5; i++)
     {
         lives[i].setPosition(-680 + (j * i), 1000);
     }
-  
+
     // Scaling and sizing
     sonic.player.setScale(Vector2f(2.f, 2.f));
     for (int i = 0; i < 35; i++)
-       crab[i].crabs.setScale(2.f, 2.f);
+        crab[i].sprite.setScale(2.f, 2.f);
     for (int i = 0; i < 20; i++)
-        enemie2.fish[i].setScale(2.f, 2.f);
+        fish[i].sprite.setScale(2.f, 2.f);
     for (int i = 0; i < 5; i++)
         lives[i].setScale(0.1, 0.1);
     windowy.setSize(Vector2f(20000, 20));
@@ -268,7 +270,11 @@ int main()
     groundTexture.setRepeated(true);
     waterTexture.setRepeated(true);
 
-    // Fonts
+
+    //=======//
+    // Fonts //
+    //=======//
+
     int score = 0;
     Font font;
     font.loadFromFile("font.ttf");
@@ -279,7 +285,11 @@ int main()
     collector.setCharacterSize(72);
     collector.setFillColor(Color::White);
 
-    // Sounds
+
+    //========//
+    // Sounds //
+    //========//
+    
     // sounds buffer
     SoundBuffer coinsoundbuffer;
     SoundBuffer jumpsoundbuffer;
@@ -300,17 +310,22 @@ int main()
     jumpsoundbuffer.loadFromFile("jump.WAV");
     deathsoundbuffer.loadFromFile("death2.WAV");
     enemiesoundbuffer.loadFromFile("enemiedeath.WAV");
-   
+
     // view
     View cam(Vector2f(0.f, 0.f), Vector2f(1920.f, 1080.f));
 
+    //game loop
     while (window.isOpen())
     {
+        //veiw
         cam.setCenter(sonic.player.getPosition());
         cam.setCenter(Vector2f(sonic.player.getPosition().x, 600));
         window.setView(cam);
+
+
         gameclock.restart();
         Event event;
+        //events loop
         while (window.pollEvent(event))
         {
             if (event.type == Event::Closed)
@@ -326,7 +341,7 @@ int main()
                     jumpsound.play();
 
                 }
-                
+
             }
             if (event.type == Event::KeyReleased)
             {
@@ -351,21 +366,41 @@ int main()
 
             }
         }
-        // velocities
+
+
+
+
+        //============//
+        // velocities //
+        //============//
+
+
         sonic.player.move(sonic.Velocity.x, sonic.Velocity.y);
+        collector.move(Velocity.x, Velocity.y);
         for (size_t i = 0; i < 35; i++)
         {
-           crab[i].crabs.move(crab[i].Velocity.x, crab[i].Velocity.y);
+            crab[i].sprite.move(crab[i].Velocity.x, crab[i].Velocity.y);
         }
         for (int i = 0; i < 20; i++)
-            enemie2.fish[i].move(enemie2.Velocity.x, enemie2.Velocity.y);
+        {
+            fish[i].sprite.move(fish[i].Velocity.x, fish[i].Velocity.y);
+        }
         for (size_t i = 0; i < 5; i++)
         {
             lives[i].move(Velocity2.x, Velocity2.y);
         }
-        collector.move(Velocity.x, Velocity.y);
+        
 
-        // collision system and gravity system
+
+
+        //=======//
+        // sonic //
+        //=======//
+        
+
+        //sonic physics& animation
+        //===============================//
+
         if (!sonic.isdead)
         {
             for (int i = 0; i < 65; i++)
@@ -385,7 +420,8 @@ int main()
                 }
 
             }
-            //sonic intersection with platforms 
+
+            //sonic colision with platforms 
             for (int i = 0; i < 20; i++)
             {
                 if (sonic.player.getGlobalBounds().intersects(platform[i].getGlobalBounds()))
@@ -427,6 +463,29 @@ int main()
 
                 }
             }
+
+            //jump animation 
+            if (!sonic.isground && !sonic.isdead)
+            {
+                animate_sprite(sonic.player, 16, 2 * 59.4, 48.87, 46, sonic.jumpanim, delay, deltatime, timer, 0);
+            }
+
+            //move left & right
+            if (Keyboard::isKeyPressed(Keyboard::A))
+            {
+                move_left(sonic.player, sonic.Velocity, Velocity, Velocity2, acc, sonic.animleft, deltatime, timer, sonic.isground, sonic.isdead);
+            }
+            else if (Keyboard::isKeyPressed(Keyboard::D))
+            {
+                move_right(sonic.player, sonic.Velocity, Velocity, Velocity2, acc, sonic.animright, deltatime, timer, sonic.isground, sonic.isdead);
+            }
+
+            // idle animation
+            if (sonic.isground && !(Keyboard::isKeyPressed(Keyboard::D)) && !(Keyboard::isKeyPressed(Keyboard::A)) && !(Keyboard::isKeyPressed(Keyboard::Space)))
+            {
+                animate_sprite(sonic.player, 8, 0, 48.87, 41, sonic.idleanim, delay, deltatime, timer, 0);
+            }
+
             // window y collision
             if (sonic.PlayerColl.getGlobalBounds().intersects(windowy.getGlobalBounds()))
             {
@@ -436,20 +495,19 @@ int main()
                 sonic.Velocity.y = -15;
                 deathsound.play();
             }
-            //sonic collision with fish
-            for (int i = 0; i < 20; i++)
-            {
-                if (sonic.PlayerColl.getGlobalBounds().intersects(enemie2.fish[i].getGlobalBounds()))
-                {
-                    sonic.lives--;
-                    sonic.isdead = true;
-                    sonic.isground = false;
-                    sonic.Velocity.y = -15;
-                    deathsound.play();
-                }
-            }
+
+
+
+
+            //=========//
+            // enemies //
+            //=========//
             
-               
+
+            //crab
+            //==============//
+
+            //crab movement
             for (int i = 0; i < 20; i++)
             {
                 if (!crab[i].isdead && !sonic.isdead)
@@ -457,9 +515,9 @@ int main()
                     //crab intersection with ground
                     for (int j = 0; j < 65; j++)
                     {
-                        if (crab[i].crabs.getGlobalBounds().intersects(ground[j].getGlobalBounds()))
+                        if (crab[i].sprite.getGlobalBounds().intersects(ground[j].getGlobalBounds()))
                         {
-                            crab[i].crabs.setPosition(crab[i].crabs.getPosition().x, ground[j].getPosition().y - 65);
+                            crab[i].sprite.setPosition(crab[i].sprite.getPosition().x, ground[j].getPosition().y - 65);
                             crab[i].Velocity.y = -0.01;
                             crab[i].isground = true;
                         }
@@ -467,18 +525,24 @@ int main()
                             crab[i].Velocity.y = 5;
                     }
 
-                    //crab collision with sonic
 
-                    if (sonic.PlayerColl.getGlobalBounds().intersects(crab[i].crabs.getGlobalBounds()))
+                    //crab collision with sonic
+                    if (sonic.PlayerColl.getGlobalBounds().intersects(crab[i].sprite.getGlobalBounds()))
                     {
+                        //when sonic hit the crab
                         if (sonic.PlayerColl.getPosition().y + 70 <= crab[i].coll.getPosition().y)
                         {
                             enemiedeath.play();
                             crab[i].isdead = true;
+                            crab[i].sprite.setScale(0, 0);
+                            crab[i].coll.setScale(0, 0);
                             sonic.Velocity.y = -12;
                             sonic.Velocity.y += 3;
                             score += 50;
                         }
+
+
+                        //when crab hit sonic
                         else if (sonic.PlayerColl.getPosition().x + 45 >= crab[i].coll.getPosition().x)
                         {
                             sonic.lives--;
@@ -498,34 +562,47 @@ int main()
                     }
 
                     // crab movement
-                    move_crab(crab[0].crabs, 1000, crab[0].isdead, crab[0].Velocity);
-                    move_crab(crab[1].crabs, 4500, crab[1].isdead, crab[1].Velocity);
-                    move_crab(crab[2].crabs, 10500, crab[2].isdead, crab[2].Velocity);
+                    move_crab(crab[0].sprite, 1000, crab[0].isdead, crab[0].Velocity);
+                    move_crab(crab[1].sprite, 4500, crab[1].isdead, crab[1].Velocity);
+                    move_crab(crab[2].sprite, 10500, crab[2].isdead, crab[2].Velocity);
 
                 }
             }
-            //jump animation 
-            if (!sonic.isground && !sonic.isdead)
-            {
-                animate_sprite(sonic.player, 16, 2 * 59.4, 48.87, 46, sonic.jumpanim, delay, deltatime, timer, 0);
-            }
-            // move left animation
-            if (Keyboard::isKeyPressed(Keyboard::A))
-            {
-                move_left(sonic.player, sonic.Velocity, Velocity,Velocity2, acc, sonic.animleft, deltatime, timer, sonic.isground, sonic.isdead);
-            }
-            // move right animation
-            else if (Keyboard::isKeyPressed(Keyboard::D))
-            {
-                move_right(sonic.player, sonic.Velocity, Velocity, Velocity2, acc, sonic.animright, deltatime, timer, sonic.isground, sonic.isdead);
-            }
 
-            // idle animation
-            if (sonic.isground && !(Keyboard::isKeyPressed(Keyboard::D)) && !(Keyboard::isKeyPressed(Keyboard::A)) && !(Keyboard::isKeyPressed(Keyboard::Space)))
+
+            //fish
+            //===========================//
+
+            for (int i = 0; i < 20; i++)
             {
-                animate_sprite(sonic.player, 8, 0, 48.87, 41, sonic.idleanim, delay, deltatime, timer, 0);
+                fish[i].Velocity.y = -10;
             }
-            //water collision
+            for (int i = 0; i < 20; i++)
+            {
+                if (sonic.PlayerColl.getGlobalBounds().intersects(fish[i].sprite.getGlobalBounds()))
+                {
+                    sonic.lives--;
+                    sonic.isdead = true;
+                    sonic.isground = false;
+                    sonic.Velocity.y = -15;
+                    deathsound.play();
+                }
+            }
+            enemierespawn(fish, window, 2600, 360, 0, 3);
+            enemierespawn(fish, window, 6380, 360, 3, 7);
+            enemierespawn(fish, window, 11550, 490, 7, 13);
+
+
+
+
+            //===========//
+            // obstacles //
+            //===========//
+
+
+            //water
+            //===============//
+
             for (int i = 0; i < 2; i++)
             {
                 if (sonic.PlayerColl.getGlobalBounds().intersects(water[i].getGlobalBounds()))
@@ -537,7 +614,10 @@ int main()
                     deathsound.play();
                 }
             }
-            // spike collision
+
+            //spike
+            //====================//
+
             for (int i = 0; i < 40; i++)
             {
                 if (sonic.PlayerColl.getGlobalBounds().intersects(spike[i].getGlobalBounds()) && sonic.isground)
@@ -572,42 +652,22 @@ int main()
             }
 
         }
-        // crab animation
-        for(int i=0;i<35;i++)
-        {
-            if (crab[i].Velocity.x == 3)
-            {
-               
-                crab[i].crabs.setOrigin(0, 0);
-                crab[i].crabs.setScale(2, 2);
-                if (timer2 < 0)
-                {
-                    crab[i].animright++;
-                    crab[i].animright = crab[i].animright % 4;
 
-                   crab[i].crabs.setTextureRect(IntRect((crab[i].animright * 48.5), 0 * 36, 46.5, 36));
-                    timer2 = 0.45;
-                }
-                else
-                    timer2 -= deltatime;
-            }
-            else if (crab[i].Velocity.x == -3)
-            {
-               
-                crab[i].crabs.setOrigin(crab[i].crabs.getLocalBounds().width, 0);
-                crab[i].crabs.setScale(-2, 2);
-                if (timer2 < 0)
-                {
-                    crab[i].animleft++;
-                    crab[i].animleft = crab[i].animleft % 4;
 
-                    crab[i].crabs.setTextureRect(IntRect((crab[i].animleft * 48.5), 0 * 36, 46.5, 36));
-                    timer2 = 0.45;
-                }
-                else
-                    timer2 -= deltatime;
-            }
-        }
+
+
+        //===================//
+        //     animation     //
+        //===================//
+        
+
+        //crab animation
+        animate_struct_stack(crab, 100, 4, 0, 47.5, 36, crabanimInd, crabdelay);
+
+        //fish animation & movement
+        animate_struct_stack(fish, 20, 2, 0, 41.5, 36, fishanimInd, fishdelay);
+
+
         // sonic death
         if (sonic.isdead && !sonic.isground)
         {
@@ -616,49 +676,13 @@ int main()
             sonic.Velocity.x = 0;
             Velocity.x = 0;
             Velocity2.x = 0;
-            
         }
-        // crab death
-        for (int i = 0; i < 20; i++)
-        {
-            if (crab[i].isdead)
-            {
-                crab[i].coll.setScale(0, 0);
-                crab[i].crabs.setScale(0, 0);
-            }
-        }
-        // can't go left in start of the level
-        if (sonic.player.getGlobalBounds().intersects(border1.getGlobalBounds()))
-        {
-            sonic.player.setPosition(sonic.player.getPosition().x - sonic.Velocity.x, sonic.player.getPosition().y);
-            collector.setPosition(collector.getPosition().x - Velocity.x, collector.getPosition().y);
-            for (int i = 0; i < 5; i++)
-            {
-                lives[i].setPosition(lives[i].getPosition().x - Velocity2.x, lives[i].getPosition().y);
-            }
-        }
-        //velocity fish
-        enemie2.Velocity.y = -10;
-        // animation fish
-        for (int i = 0; i < 20; i++)
-        {
-            if (timer3 < 0)
-            {
-                enemie2.animup++;
-                enemie2.animup = enemie2.animup % 2;
 
-                enemie2.fish[i].setTextureRect(IntRect((enemie2.animup * 41.5), 0 * 36, 40, 36));
-                timer3 = delay;
-            }
-            else
-                timer3 -= deltatime;
-        }
-        // fish repawn
-        enemierespawn(enemie2.fish, window, 2600, 360, 0, 3);
-        enemierespawn(enemie2.fish, window, 6380, 360, 3, 7);
-        enemierespawn(enemie2.fish, window, 11550, 490, 7, 13);
-       
-         //Rings Disappearing When Collision
+
+        //reward system
+        //=====================//
+        
+        //Rings Collision & Animation
         for (int i = 0; i < 100; i++)
         {
             if (sonic.PlayerColl.getGlobalBounds().intersects(ring[i].getGlobalBounds()) && !sonic.isdead)
@@ -668,11 +692,20 @@ int main()
                 coinsound.play();
             }
         }
-
-        //Rings Animation
         animate_stack(ring, 100, 10, 0, 64, 62, ringanimator, ringdelay);
 
-        //sonic repawn
+
+
+
+        //===================//
+        //       map         //
+        //===================//
+        
+
+        //display movement
+        //==============================//
+        
+        //respawn sonic & collector
         if (sonic.PlayerColl.getPosition().y > window.getSize().y)
         {
             sonic.isdead = false;
@@ -690,15 +723,36 @@ int main()
         }
         collector.setString("Score: " + to_string(score));
 
-        //position of sonic collision
+        //border of the level
+        //==================================//
+        if (sonic.player.getGlobalBounds().intersects(border1.getGlobalBounds()))
+        {
+            sonic.player.setPosition(sonic.player.getPosition().x - sonic.Velocity.x, sonic.player.getPosition().y);
+            collector.setPosition(collector.getPosition().x - Velocity.x, collector.getPosition().y);
+            for (int i = 0; i < 5; i++)
+            {
+                lives[i].setPosition(lives[i].getPosition().x - Velocity2.x, lives[i].getPosition().y);
+            }
+        }
+
+
+        //position of collision rectangles
+        //====================================//
         sonic.PlayerColl.setPosition(sonic.player.getPosition().x - 70, sonic.player.getPosition().y + 10);
         sonic.LeftColl.setPosition(sonic.player.getPosition().x - 70, sonic.player.getPosition().y + 10);
         sonic.RightColl.setPosition(sonic.player.getPosition().x - 40, sonic.player.getPosition().y + 10);
         for (int i = 0; i < 20; i++)
-            crab[i].coll.setPosition(crab[i].crabs.getPosition().x + 8, crab[i].crabs.getPosition().y + 10);
+            crab[i].coll.setPosition(crab[i].sprite.getPosition().x + 8, crab[i].sprite.getPosition().y + 10);
+
+
+
+
+        //=======================================================================================================================================================//
+
 
         //Update
         window.clear();
+
 
         //Draw
         window.draw(collector);
@@ -710,7 +764,7 @@ int main()
         for (int i = 0; i < 92; i++)
             window.draw(ring[i]);
         for (int i = 0; i < 3; i++)
-            window.draw(crab[i].crabs);
+            window.draw(crab[i].sprite);
         for (int i = 0; i < 4; i++)
             window.draw(ground[i]);
         window.draw(border1);
@@ -725,55 +779,21 @@ int main()
         for (int i = 0; i < sonic.lives; i++)
             window.draw(lives[i]);
         for (int i = 0; i < 13; i++)
-            window.draw(enemie2.fish[i]);
+            window.draw(fish[i].sprite);
         window.draw(sonic.player);
+        
+
         //Display
         window.display();
         deltatime = gameclock.getElapsedTime().asSeconds();
+
+
+        //=======================================================================================================================================================//
     }
 }
 
-void move_left(Sprite& sonic, Vector2f& sonicVelocity, Vector2f& Velocity, Vector2f& Velocity2, float& acc, int& animleft, float& deltatime, float& timer, bool isground, bool isdead)
-{
-    sonicVelocity.x = -8 + acc;
-    Velocity.x = -8 + acc;
-    Velocity2.x = -8 + acc;
-    if (isground && !isdead)
-    {
-        if (timer < 0)
-        {
-            animleft++;
-            animleft = animleft % 23;
-            if (animleft == 22)
-            {
 
-
-                if (timer < 0)
-                {
-                    animleft = 17;
-                    animleft = animleft % 23;
-                    animleft++;
-                    acc -= 1;
-
-                    sonic.setTextureRect(IntRect((animleft * 48.87), 1 * 59.4, 48.87, 46));
-                    timer = 0.1;
-                }
-                else
-                    timer -= deltatime;
-            }
-            else
-            {
-                sonic.setTextureRect(IntRect((animleft * 48.87), 1 * 59.4, 48.87, 46));
-                timer = 0.07;
-            }
-        }
-        else
-            timer -= deltatime;
-    }
-
-    sonic.setScale(-2, 2);
-    sonic.setOrigin(0, 0);
-}
+//functions
 void move_right(Sprite& sonic, Vector2f& sonicVelocity, Vector2f& Velocity, Vector2f& Velocity2, float& acc, int& animright, float& deltatime, float& timer, bool isground, bool isdead)
 {
     sonicVelocity.x = 8 + acc;
@@ -817,6 +837,47 @@ void move_right(Sprite& sonic, Vector2f& sonicVelocity, Vector2f& Velocity, Vect
 
     sonic.setOrigin(sonic.getLocalBounds().width, 0);
 }
+void move_left(Sprite& sonic, Vector2f& sonicVelocity, Vector2f& Velocity, Vector2f& Velocity2, float& acc, int& animleft, float& deltatime, float& timer, bool isground, bool isdead)
+{
+    sonicVelocity.x = -8 + acc;
+    Velocity.x = -8 + acc;
+    Velocity2.x = -8 + acc;
+    if (isground && !isdead)
+    {
+        if (timer < 0)
+        {
+            animleft++;
+            animleft = animleft % 23;
+            if (animleft == 22)
+            {
+
+
+                if (timer < 0)
+                {
+                    animleft = 17;
+                    animleft = animleft % 23;
+                    animleft++;
+                    acc -= 1;
+
+                    sonic.setTextureRect(IntRect((animleft * 48.87), 1 * 59.4, 48.87, 46));
+                    timer = 0.1;
+                }
+                else
+                    timer -= deltatime;
+            }
+            else
+            {
+                sonic.setTextureRect(IntRect((animleft * 48.87), 1 * 59.4, 48.87, 46));
+                timer = 0.07;
+            }
+        }
+        else
+            timer -= deltatime;
+    }
+
+    sonic.setScale(-2, 2);
+    sonic.setOrigin(0, 0);
+}
 void animate_sprite(Sprite& sprite, int num, float y, float width, float height, int& animationInd, float& delay, float& deltatime, float& timer, int shift)
 {
     if (timer < 0)
@@ -835,6 +896,15 @@ void animate_sprite(Sprite& sprite, int num, float y, float width, float height,
         timer -= deltatime;
     }
 }
+void animate_struct_stack(struct enemy sprites[], int size, int num, int y, int width, int height, int& animationInd, int& delay)
+{
+    animationInd++;
+    animationInd %= num * delay;
+    for (int i = 0; i < size; i++)
+    {
+        sprites[i].sprite.setTextureRect(IntRect((animationInd / delay * width), y, width, height));
+    }
+}
 void animate_stack(Sprite sprites[], int size, int num, int y, int width, int height, int& animationInd, int& delay)
 {
     animationInd++;
@@ -849,26 +919,26 @@ void construct(Sprite item[], int start, int amount, float x, int differenceX, i
     for (int i = start, j = 0; i < amount; i++, j++)
         item[i].setPosition(Vector2f(x + (j * differenceX), y - (j * differenceY)));
 }
+void enemierespawn(struct enemy sprite[], RenderWindow& window, int x, int z, int start, int amount)
+{
+    for (int i = start, j = 0; i < amount; i++, j++)
+    {
+        if (sprite[i].sprite.getPosition().y < window.getSize().y - 1024)
+        {
+            sprite[i].sprite.setPosition(x + (z * j), 940);
+        }
+    }
+}
 void setGround(Sprite item[], int num, int width, int height, int x, int y)
 {
     item[num].setTextureRect(IntRect(0, 0, width, height));
     item[num].setPosition(x, y);
 }
-void enemierespawn(Sprite item[], RenderWindow& window, int x, int z, int start, int amount)
+void enemiepos(struct enemy fish[], int x, int z, int start, int amount)
 {
     for (int i = start, j = 0; i < amount; i++, j++)
     {
-        if (item[i].getPosition().y < window.getSize().y - 1024)
-        {
-            item[i].setPosition(x + (z * j), 940);
-        }
-    }
-}
-void enemiepos(Sprite item[], int x, int z, int start, int amount)
-{
-    for (int i = start, j = 0; i < amount; i++, j++)
-    {
-        item[i].setPosition(x + (z * j), 940);
+        fish[i].sprite.setPosition(x + (z * j), 940);
     }
 }
 void move_crab(Sprite crab, int num, bool isdead, Vector2f& velocity)
@@ -884,4 +954,3 @@ void move_crab(Sprite crab, int num, bool isdead, Vector2f& velocity)
 
     }
 }
-
