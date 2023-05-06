@@ -62,19 +62,10 @@ void savehighscore(int highscore);
 int loadhighscore();
 void transition(RenderWindow& window);
 void transition_reverse(RenderWindow& window);
-void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock);
+void Game();
 int main()
 {
-    // Variables
-    Clock gameclock;
-    float delay = 0.1f;
-    float deltatime = 0;
-
-    RenderWindow window(VideoMode(1940, 1080), "Sonic.exe", Style::Default);
-    window.setFramerateLimit(60);
-
-    Game(delay, deltatime, window, gameclock);
-
+    Game();
 }
 ////////////////
 // Definations//
@@ -449,9 +440,26 @@ void transition_reverse(RenderWindow& window)
         }
     }
 }
-void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock)
+void Game()
 {
-    // Structs
+    ////////////
+    //Variables//
+    ////////////
+    Clock gameclock;
+    float delay = 0.1f;
+    float deltatime = 0;
+    bool gameover = false;
+
+    ////////////
+    // Window //
+    ////////////
+    RenderWindow window(VideoMode(1930, 1080), "Sonic.exe", Style::Default);
+    window.setFramerateLimit(60);
+
+    ////////////
+    //Structs//
+    ////////////
+
     // Sonic
     player sonic;
     sonic.player.setTextureRect(IntRect(48.87, 0, 48.87, 43));
@@ -474,12 +482,22 @@ void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock
     //fish
     for (int i = 0; i < 20; i++)
         fish[i].enemie.setTextureRect(IntRect(48.5, 0 * 36, 46.5, 36));
-    // Out Of Structs
-    // Velocities
+
+    //////////////////
+    //Out of structs//
+    //////////////////
+
+
+
+    //////////////
+    //Velocities//
+    //////////////
     Vector2f Velocity;
     Vector2f Velocity2;
 
-    //Textures
+    ////////////
+    //Textures//
+    ////////////
     Texture spiketex;
     Texture platformtex;
     Texture backgroundTexture;
@@ -492,7 +510,10 @@ void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock
     Texture crabtex;
     Texture checktex;
     Texture fishtex;
-    // Loading From Files
+    Texture overtex;
+    ///////////////////////
+    //Loading From Files//
+    //////////////////////
     crabtex.loadFromFile("Enemies1.png");
     fishtex.loadFromFile("Enemies2.png");
     sonic.sonicTex.loadFromFile("sonic22.png");
@@ -506,14 +527,19 @@ void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock
     treetex.loadFromFile("tree.png");
     liveTex.loadFromFile("lives.png");
     checktex.loadFromFile("checkpoints2.png");
+    overtex.loadFromFile("gameover.png");
 
-    // Sprites
+    ////////////
+    //Sprites//
+    ////////////
     Sprite lives[5];
     Sprite rock1;
     Sprite rock3;
     Sprite background;
-
-    // Setting Textures
+    Sprite gameover1;
+    ////////////////////
+    //Setting Textures//
+    ////////////////////
     //sonic
     sonic.player.setTexture(sonic.sonicTex);
     //crab
@@ -547,6 +573,8 @@ void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock
         checkpoint[i].coll.setTexture(checktex);
     //background
     background.setTexture(backgroundTexture);
+    //game over 1
+    gameover1.setTexture(overtex);
     //rock2
     rock1.setTexture(rockTexture);
     //rock3
@@ -558,17 +586,25 @@ void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock
         water[i].coll.setTexture(waterTexture);
     }
 
-    // set texture rect
+    ////////////////
+    //Texture Rect//
+    ///////////////
     //checkpoint
     for (int i = 0; i < 3; i++)
         checkpoint[i].coll.setTextureRect(IntRect(0, 0, 120, 77));
     //background
     background.setTextureRect(IntRect(0, 0, 1920 * 33.33333, 1080));
 
-    // Rectangle shapes
+    ////////////////////
+    //Rectangle shapes//
+    ////////////////////
     RectangleShape windowy;
     RectangleShape check[4];
     RectangleShape border1(Vector2f(10, 1080));
+
+    ////////////
+    //Positions//
+    ////////////
 
     // Building
     construct(ring, 0, 11, 960, 50, 0, 890);
@@ -619,42 +655,43 @@ void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock
     crab[1].enemie.setPosition(Vector2f(4500, 800));
     crab[2].enemie.setPosition(Vector2f(9500, 800));
     crab[3].enemie.setPosition(Vector2f(10500, 800));
-    crab[4].enemie.setPosition(Vector2f(14900, 800));
-    crab[5].enemie.setPosition(Vector2f(15700, 800));
-    crab[6].enemie.setPosition(Vector2f(16500, 800));
-    crab[7].enemie.setPosition(Vector2f(17300, 800));
-    // rest of crabs Position
+    enemiepos(crab, 14900, 800, 4, 8);
+    // Rest Of Crabs Positions
     for (int i = 8; i < 100; i++)
         crab[i].enemie.setPosition(-1000, 0);
-    // checkpoints Position and checks
+    // Checkpoints Position and Checks
     checkpoint[0].coll.setPosition(5000, 870);
-    check[0].setPosition(5020, 870);
+    check[0].setPosition(5020, 200);
     checkpoint[1].coll.setPosition(11020, 870);
-    check[1].setPosition(11000, 870);
+    check[1].setPosition(11000, 200);
     checkpoint[2].coll.setPosition(20520, 870);
-    check[2].setPosition(20550, 870);
-    // fish Position
+    check[2].setPosition(20550, 200);
+    // Fish Position
     enemiepos(fish, 2600, 360, 0, 3);
     enemiepos(fish, 6380, 360, 3, 7);
     enemiepos(fish, 11550, 490, 7, 13);
-    // rest of fishs Position
+    // Rest of Fishs Position
     for (int i = 13; i < 100; i++)
         fish[i].enemie.setPosition(-1000, 0);
-    // window y Position
+    // Window y Position
     windowy.setPosition(0, 1020);
-    //background Position
+    //Background Position
     background.setPosition(Vector2f(-1000, 0));
     // rock2 Position
     rock1.setPosition(-690, 543);
     // rock3 Position
     rock3.setPosition(-905, 747);
-    //lives Position
+    //Lives Position
     for (int i = 0, j = 63; i < 5; i++)
     {
         lives[i].setPosition(-680 + (j * i), 1000);
     }
+    //game over1 background
+    //gameover1.setPosition(sonic.PlayerColl.getPosition().x-50, 0);
 
-    // Scaling and sizing
+    ////////////
+    // Scaling//
+    ////////////
     //sonic
     sonic.player.setScale(Vector2f(2.f, 2.f));
     // sonic rectangle
@@ -692,7 +729,9 @@ void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock
     }
     // checksrectangles
     for (int i = 0; i < 3; i++)
-        check[i].setSize(Vector2f(100, 80));
+        check[i].setSize(Vector2f(50, 1000));
+    //game over1
+    gameover1.setScale(1.2, 1);
     //rock3
     rock3.setScale(0.5, 0.5);
 
@@ -736,25 +775,28 @@ void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock
     SoundBuffer deathsoundbuffer;
     SoundBuffer enemiesoundbuffer;
     SoundBuffer checksoundbuffer;
+    SoundBuffer gameoverbuffer;
     // sounds
     Sound coinsound;
     Sound jumpsound;
     Sound deathsound;
     Sound enemiedeath;
     Sound checks;
+    Sound gameover5;
     //set buffer
     coinsound.setBuffer(coinsoundbuffer);
     jumpsound.setBuffer(jumpsoundbuffer);
     deathsound.setBuffer(deathsoundbuffer);
     enemiedeath.setBuffer(enemiesoundbuffer);
     checks.setBuffer(checksoundbuffer);
+    gameover5.setBuffer(gameoverbuffer);
     // load sounds
     coinsoundbuffer.loadFromFile("coin.WAV");
     jumpsoundbuffer.loadFromFile("jump.WAV");
     deathsoundbuffer.loadFromFile("death2.WAV");
     enemiesoundbuffer.loadFromFile("enemiedeath.WAV");
     checksoundbuffer.loadFromFile("checks.WAV");
-
+    gameoverbuffer.loadFromFile("gameover.flac");
     ///////////
     // View  //
     ///////////
@@ -843,7 +885,7 @@ void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock
        ///////////////       ///////////////
 
        //sonic with ground
-        if (!sonic.isdead)
+        if (!sonic.isdead && sonic.lives > 0)
         {
             for (int i = 0; i < 65; i++)
             {
@@ -1119,7 +1161,7 @@ void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock
         //when not intersect any of checkpoints
         for (int i = 0; i < 3; i++)
         {
-            if (sonic.PlayerColl.getPosition().y > window.getSize().y && !sonic.check[i])
+            if (sonic.PlayerColl.getPosition().y > window.getSize().y && !sonic.check[i] && sonic.lives > 0)
             {
                 sonic.isdead = false;
                 sonic.isground = true;
@@ -1138,7 +1180,7 @@ void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock
         //when intersect with checkpoints
         for (int z = 0; z < 3; z++)
         {
-            if (sonic.PlayerColl.getPosition().y > window.getSize().y && sonic.check[z])
+            if (sonic.PlayerColl.getPosition().y > window.getSize().y && sonic.check[z] && sonic.lives > 0)
             {
                 checks.play();
                 sonic.isdead = false;
@@ -1167,6 +1209,17 @@ void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock
                 sonic.animright = 0;
             }
         }
+
+        if (sonic.PlayerColl.getPosition().y > window.getSize().y && sonic.lives <= 0 && !sonic.isground)
+        {
+            sonic.player.setPosition(250, 0);
+            gameover1.setPosition(-900, 0);
+            gameover = true;
+            deathsound.pause();
+            gameover5.play();
+            sonic.isground = true;
+        }
+
         //////////      ///////////
        // Score // And //HighScore//
        //////////      /////////////
@@ -1231,13 +1284,16 @@ void Game(float& delay, float& deltatime, RenderWindow& window, Clock& gameclock
             window.draw(fish[i].enemie);
         //SONIC
         window.draw(sonic.player);
+        if (!sonic.check[2] && gameover)
+        {
+            window.draw(gameover1);
+        }
 
-       ///////////
-       //DISPLAY//
-       ///////////
+        ///////////
+        //DISPLAY//
+        ///////////
         window.display();
         //DELTATIME
         deltatime = gameclock.getElapsedTime().asSeconds();
     }
 }
-
