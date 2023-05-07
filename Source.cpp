@@ -8,9 +8,31 @@
 #include <sstream>
 #include <cmath>
 #include <fstream>
+
+
 using namespace std;
 using namespace sf;
 
+////////////
+// Global //
+////////////
+bool mainmusicison = true;
+bool mainmusicispermitted = true;
+bool ispaused = false;
+bool restart = false;
+bool gameover = false;
+bool level = false;
+int volume = 5;
+int pagenumber = 0;
+int score = 0;
+int selected = 0;
+int mainmenuselected = 0;
+int b = 0;
+int p = 0;
+int levelselected = 0;
+int playerprogress = 1;
+Texture healthbar[12];
+string pname;
 
 ////////////
 // Structs//
@@ -21,11 +43,12 @@ struct player
     Sprite player;
     RectangleShape PlayerColl;
     Vector2f Velocity;
-    int animright = 0, idleanim = 0, animleft = 0, jumpanim = 0, deadanim = 0;
+    int animright = 0, idleanim = 0, animleft = 0, jumpanim = 0, deadanim = 0,attackanimInd = 0;;
     float deathdelay = 0.3, timer = 0, acc = 0;
     int score = 0, lives = 5, highscore = 0;
     bool start = false, Running = false;
-    bool isground = false, isdead = false, RunningSound = false, check[3] = { false };
+    bool  hitRight = false, hitLeft = false, slidingLeft = false, slidingRight = false,isground = false, isdead = false, check[3] = { false };
+    
 };
 struct enemies1
 {
@@ -41,6 +64,17 @@ struct Coll
     Sprite coll;
     int anim = 0;
     float timer = 0;
+};
+struct boss
+{
+    Sprite sprite;
+    Texture bosstex;
+    Vector2f Velocity;
+    RectangleShape coll;
+    int bossanimInd = 0;
+    int health = 10000;
+    float bossdelay = 0.3, bosstimer = 0;
+    bool isdead = false, isground = false;
 };
 ////////////
 // Function//
@@ -62,11 +96,75 @@ void savehighscore(int highscore);
 int loadhighscore();
 void transition(RenderWindow& window);
 void transition_reverse(RenderWindow& window);
-void Game();
+void pausemenufunc(RenderWindow& window, Sprite& sonic, int& x,bool&check);
+void mainmusic(Music& mainmenumusic);
+void playername(RenderWindow& window);
+void leaderboard(RenderWindow& window);
+void options(RenderWindow& window, Music& mainmenumusic);
+void mainmenu(RenderWindow& window);
+void levelselection(RenderWindow& window);
+void Game(RenderWindow&window,float&delay,float&deltatime,Clock& gameclock);
+void init_health_bar();
+int update_health_bar(int bosshealth);
+void boss_level(RenderWindow& window, Clock& gameclock, float& deltatime, float& delay);
 int main()
 {
-    Game();
+    ////////////
+    //Variables//
+    ////////////
+    Clock gameclock;
+    float delay = 0.1f;
+    float deltatime = 0;
+    
+    ////////////
+    // Window //
+    ////////////
+    RenderWindow window(VideoMode(1930, 1080), "Sonic.exe", Style::Default);
+    window.setFramerateLimit(60);
+   
+    Music mainmenumusic;
+    mainmenumusic.openFromFile("Sounds/mainmenumusic.ogg.opus");
+    mainmenumusic.setVolume(volume);
+
+    while (window.isOpen())
+    {
+        mainmusic(mainmenumusic);
+
+        if (pagenumber == 0)
+        {
+            mainmenu(window);
+        }
+        else if (pagenumber == 1)
+        {
+            playername(window);
+        }
+        else if (pagenumber == 2)
+        {
+            leaderboard(window);
+        }
+        else if (pagenumber == 3)
+        {
+            options(window, mainmenumusic);
+        }
+        else if (pagenumber == 4)
+        {
+            levelselection(window);
+        }
+        else if (pagenumber == 5)
+        {
+            Game(window, delay, deltatime, gameclock);
+        }
+        else if (pagenumber == 6)
+        {
+            boss_level(window, gameclock, deltatime, delay);
+        }
+        else if (pagenumber == -1)
+        {
+            window.close();
+        }
+    }
 }
+
 ////////////////
 // Definations//
 ////////////////
@@ -440,22 +538,721 @@ void transition_reverse(RenderWindow& window)
         }
     }
 }
-void Game()
+void pausemenufunc(RenderWindow& window,Sprite&sonic,int&x,bool& check)
 {
-    ////////////
-    //Variables//
-    ////////////
-    Clock gameclock;
-    float delay = 0.1f;
-    float deltatime = 0;
-    bool gameover = false;
+    selected = 0;
+    int pressed=1000;
 
-    ////////////
-    // Window //
-    ////////////
-    RenderWindow window(VideoMode(1930, 1080), "Sonic.exe", Style::Default);
-    window.setFramerateLimit(60);
+    Texture levelmenupic;
+    levelmenupic.loadFromFile("Images/realinfobackground.png");
+    Sprite levelbackpic;
+    levelbackpic.setTexture(levelmenupic);
+    levelbackpic.setPosition(sonic.getPosition().x - 960, 0);
 
+    Font pausefont;
+    pausefont.loadFromFile("Fonts/font.ttf");
+    Text pausemneutext[3];
+
+    pausemneutext[0].setFont(pausefont);
+    pausemneutext[0].setFillColor(Color(255, 204, 0));
+    pausemneutext[0].setString("continue");
+    pausemneutext[0].setCharacterSize(60);
+    
+
+    pausemneutext[1].setFont(pausefont);
+    pausemneutext[1].setFillColor(Color(255, 250, 250));
+    pausemneutext[1].setString("Restart");
+    pausemneutext[1].setCharacterSize(60);
+   
+
+    pausemneutext[2].setFont(pausefont);
+    pausemneutext[2].setFillColor(Color(255, 250, 250));
+    pausemneutext[2].setString("Quit");
+    pausemneutext[2].setCharacterSize(60);
+    
+
+    if(level)
+    {
+        for (int i = 0, j = 0; i < 3; i++, j++)
+        {
+            pausemneutext[i].setPosition(b, 400 + (200 * j));
+        }
+    }
+    else
+    {
+        pausemneutext[0].setPosition(850, 400);
+        pausemneutext[1].setPosition(850, 600);
+        pausemneutext[2].setPosition(850, 800);
+        levelbackpic.setPosition(40, 0);
+    }
+    while (ispaused == true)
+    {
+        while (window.isOpen())
+        {
+            Event event;
+            while (window.pollEvent(event))
+            {
+                if (event.type == Event::Closed)
+                {
+                    window.close();
+                    break;
+                }
+
+                if (event.type == Event::KeyReleased)
+                {
+                    if (event.key.code == Keyboard::Up)
+                    {
+                        pausemneutext[selected].setFillColor(Color(255, 250, 250));
+                        selected--;
+                        pausemneutext[selected].setFillColor(Color(255, 204, 0));
+                        if (selected == -1)
+                        {
+                            selected = 2;
+                            pausemneutext[selected].setFillColor(Color(255, 204, 0));
+
+                        }
+                    }
+                    if (event.key.code == Keyboard::Down)
+                    {
+                        pausemneutext[selected].setFillColor(Color(255, 250, 250));
+                        selected++;
+                        pausemneutext[selected].setFillColor(Color(255, 204, 0));
+                        if (selected == 3)
+                        {
+                            selected = 0;
+                            pausemneutext[selected].setFillColor(Color(255, 204, 0));
+                        }
+                    }
+                    if (event.key.code == Keyboard::Enter && !check)
+                    {
+                        pressed = selected;
+
+                        if (pressed == 0)
+                        {
+                            sonic.setPosition(x, 800);
+                            ispaused = false;
+                            return;
+                        }
+                        else if (pressed == 1)
+                        {
+                            ispaused = false;
+                            gameover = false;
+                            restart = true;
+                            return;
+                        }
+                        else if (pressed == 2)
+                        {
+                            ispaused = false;
+                            window.close();
+                            return;
+                        }
+                    }
+                    if (event.key.code == Keyboard::Enter && check)
+                    {
+                        pressed = selected;
+
+                        if (pressed == 0)
+                        {
+                            pagenumber=0;
+                            ispaused = false;
+                            return;
+                        }
+                        else if (pressed == 1)
+                        {
+                            ispaused = false;
+                            gameover = false;
+                            restart = true;
+                            return;
+                        }
+                        else if (pressed == 2)
+                        {
+                            ispaused = false;
+                            window.close();
+                            pagenumber = 0;
+                            return;
+                        }
+                    }
+                }
+            }
+            window.clear();
+            window.draw(levelbackpic);
+            for (int i = 0; i < 3; i++)
+            {
+                window.draw(pausemneutext[i]);
+            }
+            window.display();
+        }
+    }
+}
+void mainmusic(Music& mainmenumusic)
+{
+    if (mainmusicispermitted == true)
+    {
+        mainmenumusic.play();
+    }
+    else
+    {
+        mainmenumusic.stop();
+    }
+    return;
+}
+void playername(RenderWindow& window)
+{
+    if (!pname.empty())
+        pname.clear();
+    Texture playerinfoback;
+    playerinfoback.loadFromFile("Images/realinfobackground.png");
+    Sprite playerinfobacks;
+    playerinfobacks.setTexture(playerinfoback);
+    Font font;
+    font.loadFromFile("Fonts/Font.ttf");
+    Text t1;
+    Text t2;
+    t1.setFont(font);
+    t2.setFont(font);
+    t1.setString("please, Enter First name: ");
+    t1.setCharacterSize(80);
+    t2.setCharacterSize(100);
+    
+    t1.setFillColor(Color(255, 250, 250));
+    t2.setFillColor(Color(255, 250, 250));
+    if(level)
+    {
+        playerinfobacks.setPosition(p, 0);
+        t1.setPosition(p + 600, 400);
+        t2.setPosition(p + 750, 600);
+    }
+    else
+    {
+        playerinfobacks.setPosition(0, 0);
+        t1.setPosition(600, 400);
+        t2.setPosition(750, 600);
+    }
+    while (window.isOpen())
+    {
+        Event event;
+        while (window.pollEvent(event))
+        {
+            if (event.type == Event::Closed())
+                window.close();
+
+            if (event.type == Event::TextEntered)
+            {
+                pname += static_cast<char>(event.text.unicode);
+                if (Keyboard::isKeyPressed(Keyboard::Backspace) && pname.size() > 0)
+                    pname.resize(pname.size() - 1);
+            }
+            if (event.type == Event::KeyReleased)
+            {
+                if (event.key.code == Keyboard::Escape)
+                {
+                    pagenumber = 0;
+                    return;
+                }
+                if (event.key.code == Keyboard::Return && pname.size() > 1)
+                {
+                    pagenumber = 4;
+                    mainmusicispermitted = false;
+                    return;
+                }
+            }
+        }
+
+        t2.setString(pname);
+        window.clear();
+        window.draw(playerinfobacks);
+        window.draw(t1);
+        window.draw(t2);
+        window.display();
+    }
+}
+void leaderboard(RenderWindow& window)
+{
+
+    Texture leaderboardbackground;
+    leaderboardbackground.loadFromFile("Images/leaderboardinfo.png");
+    Sprite leaderboardbackgrounds;
+    leaderboardbackgrounds.setTexture(leaderboardbackground);
+
+
+    Font scorefont;
+    scorefont.loadFromFile("Fonts/Font.ttf");
+
+    Text leaderboardmaintext[2];
+
+    leaderboardmaintext[0].setFont(scorefont);;
+    leaderboardmaintext[0].setFillColor(Color(255, 250, 250));
+    leaderboardmaintext[0].setCharacterSize(60);
+    
+    leaderboardmaintext[0].setString("Name :");
+
+    leaderboardmaintext[1].setFont(scorefont);;
+    leaderboardmaintext[1].setFillColor(Color(255, 250, 250));
+    leaderboardmaintext[1].setCharacterSize(60);
+    leaderboardmaintext[1].setString("Score :");
+
+    if(level)
+    {
+        leaderboardbackgrounds.setPosition(p, 0);
+        leaderboardmaintext[0].setPosition(p + 200, 150);
+        leaderboardmaintext[1].setPosition(p + 1000, 150);
+    }
+    else
+    {
+        leaderboardbackgrounds.setPosition(0, 0);
+        leaderboardmaintext[0].setPosition(200, 150);
+        leaderboardmaintext[1].setPosition(1000, 150);
+    }
+    Text scoretexts[51];
+    for (int i = 0; i <= 50; i++)
+    {
+        scoretexts[i].setFont(scorefont);
+        scoretexts[i].setFillColor(Color(255, 250, 250));
+        scoretexts[i].setCharacterSize(60);
+    }
+
+    ifstream infile;
+    infile.open("leaderboardhistory.txt", ios::in);
+
+    vector<string> lines;
+    string line;
+    while (getline(infile, line, '*'))
+    {
+        lines.push_back(line);
+    }
+    for (int i = 0; i < lines.size(); i++)
+    {
+        scoretexts[i].setString(lines[i]);
+        scoretexts[i].setPosition(p+400, (250) + (200 * i));
+    }
+
+    while (window.isOpen())
+    {
+        Event event;
+        while (window.pollEvent(event))
+        {
+            if (event.type == Event::Closed())
+                window.close();
+
+            if (Keyboard::isKeyPressed(Keyboard::Key::Escape))
+            {
+                pagenumber = 0;
+                return;
+            }
+
+            if (Keyboard::isKeyPressed(Keyboard::Key::Up))
+            {
+                if (scoretexts[0].getPosition().y <= 5)
+                {
+                    for (int i = 0; i < lines.size(); i++)
+                    {
+                        scoretexts[i].move(0, 5);
+                    }
+                }
+            }
+
+            if (Keyboard::isKeyPressed(Keyboard::Key::Down))
+            {
+                if (scoretexts[(lines.size()) - 1].getPosition().y >= window.getPosition().y + 1000)
+                {
+                    for (int i = 0; i < lines.size() + 10; i++)
+                    {
+                        scoretexts[i].move(0, -5);
+                    }
+                }
+            }
+        }
+        window.clear();
+        window.draw(leaderboardbackgrounds);
+        for (int i = 0; i < 2; i++)
+        {
+            window.draw(leaderboardmaintext[i]);
+        }
+        for (int i = 0; i < lines.size(); i++)
+        {
+            window.draw(scoretexts[i]);
+        }
+        window.display();
+    }
+}
+void options(RenderWindow& window, Music& mainmenumusic)
+{
+
+    Texture optionsmenu;
+    optionsmenu.loadFromFile("Images/realinfobackground.png");
+    Sprite optionsmenus;
+    optionsmenus.setTexture(optionsmenu);
+
+    Font font;
+    font.loadFromFile("Fonts/Font.ttf");
+
+    Text optionstext[2];
+
+    optionstext[0].setFont(font);
+    optionstext[0].setFillColor(Color(255, 204, 0));
+    optionstext[0].setString("MENU SOUND :");
+    optionstext[0].setCharacterSize(80);
+    ;
+
+
+    optionstext[1].setFont(font);
+    optionstext[1].setFillColor(Color(255, 250, 250));
+    optionstext[1].setCharacterSize(100);
+    optionstext[1].setPosition(p+1100, 390);
+    if(level)
+    {
+        optionsmenus.setPosition(p, 0);
+        optionstext[0].setPosition(p + 600, 400);
+        optionstext[1].setPosition(p + 1100, 390);
+    }
+    else
+    {
+        optionsmenus.setPosition(0, 0);
+        optionstext[0].setPosition(600, 400);
+        optionstext[1].setPosition(1100, 390);
+    }
+    if (pagenumber == 3)
+    {
+        while (window.isOpen())
+        {
+            Event event;
+            while (window.pollEvent(event))
+            {
+
+                if (event.type == Event::Closed)
+                {
+                    window.close();
+                    break;
+                }
+
+                if (event.type == Event::KeyPressed)
+                {
+                    if (event.key.code == Keyboard::Key::Right)
+                    {
+                        if (mainmenumusic.getVolume() <= 100)
+                            mainmenumusic.setVolume(mainmenumusic.getVolume() + 2);
+                        if (mainmenumusic.getVolume() + 2 > 100)
+                            mainmenumusic.setVolume(100);
+                        volume = mainmenumusic.getVolume();
+                    }
+
+                    if (event.key.code == Keyboard::Key::Left)
+                    {
+                        if (mainmenumusic.getVolume() >= 0)
+                            mainmenumusic.setVolume(mainmenumusic.getVolume() - 2);
+                        if (mainmenumusic.getVolume() - 2 < 0)
+                            mainmenumusic.setVolume(0);
+                        volume = mainmenumusic.getVolume();
+                    }
+                }
+
+                if (event.type == Event::KeyReleased)
+                {
+                    if (event.key.code == Keyboard::Escape)
+                    {
+                        pagenumber = 0;
+                        return;
+                    }
+                }
+
+
+            }
+            volume = mainmenumusic.getVolume();
+            string volumestring = to_string(volume);
+            optionstext[1].setString(volumestring);
+            window.clear();
+            window.draw(optionsmenus);
+            for (int i = 0; i < 2; i++)
+            {
+                window.draw(optionstext[i]);
+            }
+            window.display();
+        }
+    }
+}
+void mainmenu(RenderWindow& window)
+{
+    mainmenuselected = 0;
+    int pressed =1000;
+
+    Texture mainmenupic;
+    mainmenupic.loadFromFile("Images/mainmenubackground.png");
+    Sprite backpic;
+    backpic.setTexture(mainmenupic);
+
+    Font mainmenufont;
+    mainmenufont.loadFromFile("Fonts/font.ttf");
+    Text mainmenu[4];
+
+    mainmenu[0].setFont(mainmenufont);
+    mainmenu[0].setFillColor(Color(255, 204, 0));
+    mainmenu[0].setString("Start");
+    mainmenu[0].setCharacterSize(80);
+    
+    
+
+    mainmenu[1].setFont(mainmenufont);
+    mainmenu[1].setFillColor(Color(255, 250, 250));
+    mainmenu[1].setString("leaderboard");
+    mainmenu[1].setCharacterSize(80);
+    
+   
+
+    mainmenu[2].setFont(mainmenufont);
+    mainmenu[2].setFillColor(Color(255, 250, 250));
+    mainmenu[2].setString("Options");
+    mainmenu[2].setCharacterSize(80);
+    
+
+    mainmenu[3].setFont(mainmenufont);
+    mainmenu[3].setFillColor(Color(255, 250, 250));
+    mainmenu[3].setString("Exit");
+    mainmenu[3].setCharacterSize(80);
+    //220
+    mainmenu[3].setPosition(Vector2f(p+220, 2000 / (4) + 350));
+
+
+    Music mainmenumusic;
+    mainmenumusic.openFromFile("Sounds/mainmenumusic.ogg.opus");
+    if(level)
+    {
+        backpic.setPosition(p, 0);
+        mainmenu[0].setPosition(Vector2f(p + 200, 2000 / (4) - 100));
+        mainmenu[1].setPosition(Vector2f(p + 100, 2000 / (4) + 50));
+        mainmenu[2].setPosition(Vector2f(p + 180, 2000 / (4) + (200)));
+        mainmenu[3].setPosition(Vector2f(p + 220, 2000 / (4) + 350));
+    }
+    else
+    {
+        backpic.setPosition(0, 0);
+        mainmenu[0].setPosition(Vector2f(200, 2000 / (4) - 100));
+        mainmenu[1].setPosition(Vector2f(100, 2000 / (4) + 50));
+        mainmenu[2].setPosition(Vector2f(180, 2000 / (4) + (200)));
+        mainmenu[3].setPosition(Vector2f(220, 2000 / (4) + 350));
+    }
+    while (true)
+    {
+
+        if (pagenumber == 0)
+        {
+            while (window.isOpen())
+            {
+                Event event;
+                while (window.pollEvent(event))
+                {
+                    if (event.type == Event::Closed)
+                    {
+                        pagenumber = -1;
+                        window.close();
+                        break;
+                    }
+
+                    if (event.type == Event::KeyReleased)
+                    {
+                        if (event.key.code == Keyboard::Up)
+                        {
+                            mainmenu[mainmenuselected].setFillColor(Color(255, 250, 250));
+                            mainmenuselected--;
+                            mainmenu[mainmenuselected].setFillColor(Color(255, 204, 0));
+                            if (mainmenuselected == -1)
+                            {
+                                mainmenuselected = 3;
+                                mainmenu[mainmenuselected].setFillColor(Color(255, 204, 0));
+
+                            }
+                        }
+                        if (event.key.code == Keyboard::Down)
+                        {
+                            mainmenu[mainmenuselected].setFillColor(Color(255, 250, 250));
+                            mainmenuselected++;
+                            mainmenu[mainmenuselected].setFillColor(Color(255, 204, 0));
+                            if (mainmenuselected == 4)
+                            {
+                                mainmenuselected = 0;
+                                mainmenu[mainmenuselected].setFillColor(Color(255, 204, 0));
+                            }
+                        }
+                        if (event.key.code == Keyboard::Enter)
+                        {
+                            pressed = mainmenuselected;
+                            if (pressed == 0)
+                            {
+                                pagenumber = 1;
+                                return;
+                            }
+                            else if (pressed == 1)
+                            {
+                                pagenumber = 2;
+                                return;
+                            }
+                            else if (pressed == 2)
+                            {
+                                pagenumber = 3;
+                                return;
+                            }
+                            else if (pressed == 3)
+                            {
+                                pagenumber = -1;
+                                return;
+                            }
+
+                        }
+                       
+                    }
+
+                }
+                window.clear();
+                if (pagenumber != 0)
+                {
+                    return;
+                    break;
+                }
+                window.draw(backpic);
+                for (int i = 0; i < 4; i++)
+                {
+                    window.draw(mainmenu[i]);
+                }
+                window.display();
+            }
+        }
+    }
+}
+void levelselection(RenderWindow& window)
+{
+
+    levelselected = 0;
+    int pressed = 1000;
+
+    Texture levelselectionbackground;
+    levelselectionbackground.loadFromFile("Images/realinfobackground.png");
+
+    Sprite levelselectionbackgrounds;
+    levelselectionbackgrounds.setTexture(levelselectionbackground);
+
+    Font levelselectionfont;
+    levelselectionfont.loadFromFile("Fonts/font.ttf");
+    Text levelselection[2];
+
+    levelselection[0].setFont(levelselectionfont);
+    levelselection[0].setFillColor(Color(255, 204, 0));
+    levelselection[0].setString("Level 1 : Pacing Forward");
+    levelselection[0].setCharacterSize(70);
+    
+
+    levelselection[1].setFont(levelselectionfont);
+    levelselection[1].setFillColor(Color(119, 136, 153));
+    levelselection[1].setString("Level 2 : Finally, We Met");
+    levelselection[1].setCharacterSize(70);
+    
+
+    
+    if (level)
+    {
+        levelselectionbackgrounds.setPosition(p, 0);
+        levelselection[0].setPosition(Vector2f(p + 550, 400));
+        levelselection[1].setPosition(Vector2f(p + 550,600));
+    }
+    else
+    {
+        levelselectionbackgrounds.setPosition(0, 0);
+        levelselection[0].setPosition(Vector2f(550, 400));
+        levelselection[1].setPosition(Vector2f(550, 600));
+    }
+    while (window.isOpen())
+    {
+        Event event;
+        while (window.pollEvent(event))
+        {
+            if (event.type == Event::Closed)
+            {
+                window.close();
+                break;
+            }
+
+            if (playerprogress == 1)
+            {
+                if (event.type == Event::KeyReleased)
+                {
+                    if (event.key.code == Keyboard::Enter)
+                    {
+                        pagenumber = 5;
+                        return;
+                    }
+
+                    if (event.key.code == Keyboard::Escape)
+                    {
+                        pagenumber = 1;
+                        return;
+                    }
+                }
+            }
+
+            if (playerprogress == 2)
+            {
+
+                levelselection[1].setFillColor(Color(255, 250, 250));
+
+                if (event.type == Event::KeyReleased)
+                {
+                    if (event.key.code == Keyboard::Up)
+                    {
+                        levelselection[levelselected].setFillColor(Color(255, 250, 250));
+                        levelselected--;
+                        levelselection[levelselected].setFillColor(Color(255, 204, 0));
+                        if (levelselected == -1)
+                        {
+                            levelselected = 1;
+                            levelselection[levelselected].setFillColor(Color(255, 204, 0));
+                        }
+                    }
+                    if (event.key.code == Keyboard::Down)
+                    {
+                        levelselection[levelselected].setFillColor(Color(255, 250, 250));
+                        levelselected++;
+                        levelselection[levelselected].setFillColor(Color(255, 204, 0));
+                        if (levelselected == 2)
+                        {
+                            levelselected = 0;
+                            levelselection[levelselected].setFillColor(Color(255, 204, 0));
+                        }
+                    }
+                    if (event.key.code == Keyboard::Enter)
+                    {
+                        pressed = levelselected;
+
+                        if (pressed == 0)
+                        {
+                            pagenumber = 5;
+                            return;
+                        }
+                        else if (pressed == 1)
+                        {
+                            pagenumber = 6;
+                            return;
+                        }
+                    }
+                    if (event.key.code == Keyboard::Escape)
+                    {
+                        pagenumber = 0;
+                        return;
+                    }
+                }
+            }
+
+        }
+        window.clear();
+        window.draw(levelselectionbackgrounds);
+        for (int i = 0; i < 2; i++)
+        {
+            window.draw(levelselection[i]);
+        }
+        window.display();
+    }
+}
+void Game(RenderWindow& window, float& delay, float& deltatime,Clock&gameclock)
+{
+    int x =0;
+    level = true;
     ////////////
     //Structs//
     ////////////
@@ -511,24 +1308,25 @@ void Game()
     Texture checktex;
     Texture fishtex;
     Texture overtex;
+    Texture leveltex;
     ///////////////////////
     //Loading From Files//
     //////////////////////
-    crabtex.loadFromFile("Enemies1.png");
-    fishtex.loadFromFile("Enemies2.png");
-    sonic.sonicTex.loadFromFile("sonic22.png");
-    platformtex.loadFromFile("Wall.png");
-    spiketex.loadFromFile("Spike.png");
-    backgroundTexture.loadFromFile("background.png");
-    groundTexture.loadFromFile("ground2.png");
-    ringTexture.loadFromFile("ring.png");
-    rockTexture.loadFromFile("rock.png");
-    waterTexture.loadFromFile("water.png");
-    treetex.loadFromFile("tree.png");
-    liveTex.loadFromFile("lives.png");
-    checktex.loadFromFile("checkpoints2.png");
-    overtex.loadFromFile("gameover.png");
-
+    crabtex.loadFromFile("Images/Enemies1.png");
+    fishtex.loadFromFile("Images/Enemies2.png");
+    sonic.sonicTex.loadFromFile("Images/Sonic.png");
+    platformtex.loadFromFile("Images/Wall.png");
+    spiketex.loadFromFile("Images/Spike.png");
+    backgroundTexture.loadFromFile("Images/Background.png");
+    groundTexture.loadFromFile("Images/Ground.png");
+    ringTexture.loadFromFile("Images/Ring.png");
+    rockTexture.loadFromFile("Images/Rock.png");
+    waterTexture.loadFromFile("Images/Water.png");
+    treetex.loadFromFile("Images/Tree.png");
+    liveTex.loadFromFile("Images/Lives.png");
+    checktex.loadFromFile("Images/Checkpoints.png");
+    overtex.loadFromFile("Images/GameOver.png");
+    leveltex.loadFromFile("Images/LevelComplete.png");
     ////////////
     //Sprites//
     ////////////
@@ -537,6 +1335,7 @@ void Game()
     Sprite rock3;
     Sprite background;
     Sprite gameover1;
+    Sprite levelcomplete;
     ////////////////////
     //Setting Textures//
     ////////////////////
@@ -579,6 +1378,8 @@ void Game()
     rock1.setTexture(rockTexture);
     //rock3
     rock3.setTexture(rockTexture);
+    //level complete
+    levelcomplete.setTexture(leveltex);
     //ground and water
     for (int i = 0; i < 70; i++)
     {
@@ -607,87 +1408,88 @@ void Game()
     ////////////
 
     // Building
-    construct(ring, 0, 11, 960, 50, 0, 890);
-    construct(ring, 11, 22, 960, 50, 0, 828);
-    construct(spike, 0, 3, 2000, 200, 0, 856);
-    construct(platform, 0, 2, 2700, 400, 0, 650);
-    construct(ring, 22, 24, 2767, 400, 0, 590);
-    construct(spike, 3, 6, 3527, 200, 0, 856);
-    construct(ring, 24, 35, 4474, 50, 0, 890);
-    construct(ring, 35, 46, 4474, 50, 0, 828);
-    construct(platform, 2, 5, 6500, 350, 150, 828);
-    construct(spike, 6, 9, 6630, 350, 150, 735);
-    construct(ring, 46, 49, 6550, 350, 150, 770);
-    construct(ring, 49, 60, 7500, 150, 0, 890);
-    construct(spike, 9, 15, 7570, 300, 0, 856);
-    construct(tree, 0, 2, 100, 1500, 0, 238);
-    construct(tree, 2, 4, 3300, 1700, 0, 238);
-    construct(tree, 4, 7, 6000, 1613, 0, 238);
-    construct(platform, 5, 10, 11700, 500, 0, 700);
-    construct(ring, 60, 64, 11880, 50, 60, 470);
-    construct(ring, 64, 67, 12080, 50, -60, 350);
-    construct(ring, 67, 71, 12380, 50, 60, 470);
-    construct(ring, 71, 74, 12580, 50, -60, 350);
-    construct(ring, 74, 78, 12880, 50, 60, 470);
-    construct(ring, 78, 81, 13080, 50, -60, 350);
-    construct(ring, 81, 85, 13380, 50, 60, 470);
-    construct(ring, 85, 88, 13580, 50, -60, 350);
-    construct(tree, 7, 9, 11200, 3000, 0, 238);
-    construct(spike, 15, 17, 14663, 64, 0, 856);
-    construct(spike, 17, 19, 15463, 64, 0, 856);
-    construct(spike, 19, 21, 16263, 64, 0, 856);
-    construct(spike, 21, 23, 17063, 64, 0, 856);
-    construct(spike, 23, 25, 17863, 64, 0, 856);
-    construct(platform, 10, 14, 15030, 800, 0, 700);
-    construct(ring, 88, 92, 15096, 800, 0, 640);
-    construct(tree, 9, 11, 15600, 2000, 0, 238);
-    construct(rock, 0, 1, -690, 0, 0, 543);
-    construct(rock, 1, 2, -905, 0, 0, 747);
-    construct(platform, 14, 16, 10049, 400, 0, 700);
-    construct(ring, 92, 95, 10057, 60, 0, 640);
-    construct(ring, 95, 98, 10456, 60, 0, 640);
-
-    // Sonic Position
-    sonic.player.setPosition(250, 720);
-    sonic.PlayerColl.setPosition(250, 720);
-    // crabs Position
-    crab[0].enemie.setPosition(Vector2f(950, 800));
-    crab[1].enemie.setPosition(Vector2f(4500, 800));
-    crab[2].enemie.setPosition(Vector2f(9500, 800));
-    crab[3].enemie.setPosition(Vector2f(10500, 800));
-    enemiepos(crab, 14900, 800, 4, 8);
-    // Rest Of Crabs Positions
-    for (int i = 8; i < 100; i++)
-        crab[i].enemie.setPosition(-1000, 0);
-    // Checkpoints Position and Checks
-    checkpoint[0].coll.setPosition(5000, 870);
-    check[0].setPosition(5020, 200);
-    checkpoint[1].coll.setPosition(11020, 870);
-    check[1].setPosition(11000, 200);
-    checkpoint[2].coll.setPosition(20520, 870);
-    check[2].setPosition(20550, 200);
-    // Fish Position
-    enemiepos(fish, 2600, 360, 0, 3);
-    enemiepos(fish, 6380, 360, 3, 7);
-    enemiepos(fish, 11550, 490, 7, 13);
-    // Rest of Fishs Position
-    for (int i = 13; i < 100; i++)
-        fish[i].enemie.setPosition(-1000, 0);
-    // Window y Position
-    windowy.setPosition(0, 1020);
-    //Background Position
-    background.setPosition(Vector2f(-1000, 0));
-    // rock2 Position
-    rock1.setPosition(-690, 543);
-    // rock3 Position
-    rock3.setPosition(-905, 747);
-    //Lives Position
-    for (int i = 0, j = 63; i < 5; i++)
+    if(level)
     {
-        lives[i].setPosition(-680 + (j * i), 1000);
+        construct(ring, 0, 11, 960, 50, 0, 890);
+        construct(ring, 11, 22, 960, 50, 0, 828);
+        construct(spike, 0, 3, 2000, 200, 0, 856);
+        construct(platform, 0, 2, 2700, 400, 0, 650);
+        construct(ring, 22, 24, 2767, 400, 0, 590);
+        construct(spike, 3, 6, 3527, 200, 0, 856);
+        construct(ring, 24, 35, 4474, 50, 0, 890);
+        construct(ring, 35, 46, 4474, 50, 0, 828);
+        construct(platform, 2, 5, 6500, 350, 150, 828);
+        construct(spike, 6, 9, 6630, 350, 150, 735);
+        construct(ring, 46, 49, 6550, 350, 150, 770);
+        construct(ring, 49, 60, 7500, 150, 0, 890);
+        construct(spike, 9, 15, 7570, 300, 0, 856);
+        construct(tree, 0, 2, 100, 1500, 0, 238);
+        construct(tree, 2, 4, 3300, 1700, 0, 238);
+        construct(tree, 4, 7, 6000, 1613, 0, 238);
+        construct(platform, 5, 10, 11700, 500, 0, 700);
+        construct(ring, 60, 64, 11880, 50, 60, 470);
+        construct(ring, 64, 67, 12080, 50, -60, 350);
+        construct(ring, 67, 71, 12380, 50, 60, 470);
+        construct(ring, 71, 74, 12580, 50, -60, 350);
+        construct(ring, 74, 78, 12880, 50, 60, 470);
+        construct(ring, 78, 81, 13080, 50, -60, 350);
+        construct(ring, 81, 85, 13380, 50, 60, 470);
+        construct(ring, 85, 88, 13580, 50, -60, 350);
+        construct(tree, 7, 9, 11200, 3000, 0, 238);
+        construct(spike, 15, 17, 14663, 64, 0, 856);
+        construct(spike, 17, 19, 15463, 64, 0, 856);
+        construct(spike, 19, 21, 16263, 64, 0, 856);
+        construct(spike, 21, 23, 17063, 64, 0, 856);
+        construct(spike, 23, 25, 17863, 64, 0, 856);
+        construct(platform, 10, 14, 15030, 800, 0, 700);
+        construct(ring, 88, 92, 15096, 800, 0, 640);
+        construct(tree, 9, 11, 15600, 2000, 0, 238);
+        construct(rock, 0, 1, -690, 0, 0, 543);
+        construct(rock, 1, 2, -905, 0, 0, 747);
+        construct(platform, 14, 16, 10049, 400, 0, 700);
+        construct(ring, 92, 95, 10057, 60, 0, 640);
+        construct(ring, 95, 98, 10456, 60, 0, 640);
+
+        // Sonic Position
+        sonic.player.setPosition(20000, 720);
+        sonic.PlayerColl.setPosition(250, 720);
+        // crabs Position
+        crab[0].enemie.setPosition(Vector2f(950, 800));
+        crab[1].enemie.setPosition(Vector2f(4500, 800));
+        crab[2].enemie.setPosition(Vector2f(9500, 800));
+        crab[3].enemie.setPosition(Vector2f(10500, 800));
+        enemiepos(crab, 14900, 800, 4, 8);
+        // Rest Of Crabs Positions
+        for (int i = 8; i < 100; i++)
+            crab[i].enemie.setPosition(-1000, 0);
+        // Checkpoints Position and Checks
+        checkpoint[0].coll.setPosition(5000, 870);
+        check[0].setPosition(5020, 200);
+        checkpoint[1].coll.setPosition(11020, 870);
+        check[1].setPosition(11000, 200);
+        checkpoint[2].coll.setPosition(20520, 870);
+        check[2].setPosition(20550, 200);
+        // Fish Position
+        enemiepos(fish, 2600, 360, 0, 3);
+        enemiepos(fish, 6380, 360, 3, 7);
+        enemiepos(fish, 11550, 490, 7, 13);
+        // Rest of Fishs Position
+        for (int i = 13; i < 100; i++)
+            fish[i].enemie.setPosition(-1000, 0);
+        // Window y Position
+        windowy.setPosition(0, 1020);
+        //Background Position
+        background.setPosition(Vector2f(-1000, 0));
+        // rock2 Position
+        rock1.setPosition(-690, 543);
+        // rock3 Position
+        rock3.setPosition(-905, 747);
+        //Lives Position
+        for (int i = 0, j = 63; i < 5; i++)
+        {
+            lives[i].setPosition(-710 + (j * i), 1000);
+        }
     }
-    //game over1 background
-    //gameover1.setPosition(sonic.PlayerColl.getPosition().x-50, 0);
 
     ////////////
     // Scaling//
@@ -757,14 +1559,15 @@ void Game()
     // Fonts //
     ///////////
     Font font;
-    font.loadFromFile("font.ttf");
+   
+    font.loadFromFile("Fonts/Font.ttf");
     Text collector;
     collector.setFont(font);
     collector.setString("Score: " + to_string(sonic.score));
     collector.setPosition(-680, 50);
     collector.setCharacterSize(72);
     collector.setFillColor(Color::White);
-
+    
     ///////////
     // Sounds//
     ///////////
@@ -791,12 +1594,12 @@ void Game()
     checks.setBuffer(checksoundbuffer);
     gameover5.setBuffer(gameoverbuffer);
     // load sounds
-    coinsoundbuffer.loadFromFile("coin.WAV");
-    jumpsoundbuffer.loadFromFile("jump.WAV");
-    deathsoundbuffer.loadFromFile("death2.WAV");
-    enemiesoundbuffer.loadFromFile("enemiedeath.WAV");
-    checksoundbuffer.loadFromFile("checks.WAV");
-    gameoverbuffer.loadFromFile("gameover.flac");
+    coinsoundbuffer.loadFromFile("Sounds/Coin.WAV");
+    jumpsoundbuffer.loadFromFile("Sounds/Jump.WAV");
+    deathsoundbuffer.loadFromFile("Sounds/Death.WAV");
+    enemiesoundbuffer.loadFromFile("Sounds/EnemieDeath.WAV");
+    checksoundbuffer.loadFromFile("Sounds/Checks.WAV");
+    gameoverbuffer.loadFromFile("Sounds/GameOver.flac");
     ///////////
     // View  //
     ///////////
@@ -807,7 +1610,7 @@ void Game()
         ///////////////
        // Boss Level //
        ///////////////
-        if (!sonic.check[2])
+        if (!sonic.check[2]||!ispaused)
         {
             cam.setCenter(sonic.player.getPosition());
             cam.setCenter(Vector2f(sonic.player.getPosition().x, 600));
@@ -834,6 +1637,14 @@ void Game()
                 }
 
             }
+            if (sonic.lives == 0)
+            {
+                ofstream offile;
+                offile.open("leaderboardhistory.txt", ios::app);
+                offile << pname << "                                                               " << sonic.score << "*" << endl;
+                sonic.score = 0;
+                sonic.lives = -1;
+            }
             // When Released A and D
             if (event.type == Event::KeyReleased)
             {
@@ -844,7 +1655,7 @@ void Game()
                     sonic.Velocity.x = 0;
                     Velocity.x = 0;
                     sonic.acc = 0;
-                    sonic.RunningSound = false;
+                   
                 }
                 if ((event.key.code == Keyboard::D))
                 {
@@ -853,7 +1664,33 @@ void Game()
                     Velocity.x = 0;
                     Velocity2.x = 0;
                     sonic.acc = 0;
-                    sonic.RunningSound = false;
+                    
+                }
+                x = sonic.player.getPosition().x;
+                if ((event.key.code == Keyboard::Escape) &&!sonic.check[2])
+                {
+                    x = sonic.player.getPosition().x;
+                    ispaused = true;
+                    pausemenufunc(window,sonic.player,x,sonic.check[2]);
+                    if (restart == true)
+                    {
+                        Game(window, delay, deltatime, gameclock);
+                    }
+                    if (pagenumber == 0)
+                        return;
+                }
+                if (event.type == Event::KeyReleased && sonic.check[2])
+                {
+                    ispaused = true;
+                    pausemenufunc(window, sonic.player, x, sonic.check[2]);
+                    if (restart == true)
+                    {
+                        Game(window, delay, deltatime, gameclock);
+                    }
+                    if (pagenumber == 0)
+                        return;
+                    if (pagenumber == 4)
+                        return;
                 }
 
             }
@@ -885,7 +1722,7 @@ void Game()
        ///////////////       ///////////////
 
        //sonic with ground
-        if (!sonic.isdead && sonic.lives > 0)
+        if (!sonic.isdead && sonic.lives > 0 &&!sonic.check[2])
         {
             for (int i = 0; i < 65; i++)
             {
@@ -970,26 +1807,12 @@ void Game()
                     ///////////////
                     if (i == 2)
                     {
-                        transition(window);
-                        transition_reverse(window);
-                        sonic.isdead = false;
-                        sonic.isground = true;
-                        sonic.player.setPosition(250, 730);
-                        collector.setPosition(-680, 50);
-                        for (int i = 0, j = 63; i < 5; i++)
-                        {
-                            lives[i].setPosition(-680 + (j * i), 1000);
-                        }
-                        cam.setCenter(sonic.player.getPosition());
-                        cam.setCenter(Vector2f(sonic.player.getPosition().x, 600));
-                        window.setView(cam);
-                        sonic.Velocity.x = 0;
-                        sonic.acc = 0;
-                        sonic.animleft = 0;
-                        sonic.animright = 0;
+                        sonic.player.setPosition(sonic.player.getPosition().x - sonic.Velocity.x, sonic.player.getPosition().y);
+                        playerprogress++;
 
                     }
                 }
+               
             //when not intersect
                 else if (!(sonic.PlayerColl.getGlobalBounds().intersects(check[i].getGlobalBounds())))
                 {
@@ -1182,35 +2005,34 @@ void Game()
         {
             if (sonic.PlayerColl.getPosition().y > window.getSize().y && sonic.check[z] && sonic.lives > 0)
             {
-                checks.play();
+                if(z<=1)
+                {
+                    checks.play();
+                }
+                if (z > 2)
+                {
+                    checks.pause();
+                }
                 sonic.isdead = false;
                 sonic.isground = true;
-                if (z <= 1)
-                {
+                //if(z<=1)
+                //{
                     sonic.player.setPosition(check[z].getPosition().x, 730);
+               // }
                     collector.setPosition(check[z].getPosition().x - 930, 50);
                     for (int i = 0, j = 63; i < 5; i++)
                     {
-                        lives[i].setPosition(check[z].getPosition().x - 930 + (j * i), 1000);
+                        lives[i].setPosition(check[z].getPosition().x - 960 + (j * i), 1000);
                     }
-                }
-                else
-                {
-                    sonic.player.setPosition(check[z].getPosition().x, 730);
-                    collector.setPosition(check[z].getPosition().x - 910, 50);
-                    for (int i = 0, j = 63; i < 5; i++)
-                    {
-                        lives[i].setPosition(check[z].getPosition().x - 910 + (j * i), 1000);
-                    }
-                }
                 sonic.Velocity.x = 0;
                 sonic.acc = 0;
                 sonic.animleft = 0;
                 sonic.animright = 0;
+               
             }
         }
 
-        if (sonic.PlayerColl.getPosition().y > window.getSize().y && sonic.lives <= 0 && !sonic.isground)
+        if (sonic.PlayerColl.getPosition().y > window.getSize().y && sonic.lives <= 0 && !sonic.isground &&!sonic.check[2])
         {
             sonic.player.setPosition(250, 0);
             gameover1.setPosition(-900, 0);
@@ -1219,7 +2041,7 @@ void Game()
             gameover5.play();
             sonic.isground = true;
         }
-
+        
         //////////      ///////////
        // Score // And //HighScore//
        //////////      /////////////
@@ -1237,6 +2059,9 @@ void Game()
         for (int i = 0; i < 20; i++)
             crab[i].coll.setPosition(crab[i].enemie.getPosition().x + 8, crab[i].enemie.getPosition().y + 10);
 
+        b = sonic.player.getPosition().x-120;
+        levelcomplete.setPosition(sonic.player.getPosition().x - 972, 0);
+        p = sonic.player.getPosition().x - 960;
         //Update
         window.clear();
 
@@ -1288,6 +2113,10 @@ void Game()
         {
             window.draw(gameover1);
         }
+        if (sonic.check[2])
+        {
+            window.draw(levelcomplete);
+        }
 
         ///////////
         //DISPLAY//
@@ -1295,5 +2124,605 @@ void Game()
         window.display();
         //DELTATIME
         deltatime = gameclock.getElapsedTime().asSeconds();
+    }
+}
+void init_health_bar()
+{
+    healthbar[10].loadFromFile("Images/health_bar/health_bar100.png");
+    healthbar[9].loadFromFile("Images/health_bar/health_bar90.png");
+    healthbar[8].loadFromFile("Images/health_bar/health_bar80.png");
+    healthbar[7].loadFromFile("Images/health_bar/health_bar70.png");
+    healthbar[6].loadFromFile("Images/health_bar/health_bar60.png");
+    healthbar[5].loadFromFile("Images/health_bar/health_bar50.png");
+    healthbar[4].loadFromFile("Images/health_bar/health_bar40.png");
+    healthbar[3].loadFromFile("Images/health_bar/health_bar30.png");
+    healthbar[2].loadFromFile("Images/health_bar/health_bar20.png");
+    healthbar[1].loadFromFile("Images/health_bar/health_bar10.png");
+    healthbar[0].loadFromFile("Images/health_bar/health_bar00.png");
+}
+int update_health_bar(int bosshealth)
+{
+    if (bosshealth == 10000)
+        return 10;
+    else if (bosshealth == 9000)
+        return 9;
+    else if (bosshealth == 8000)
+        return 8;
+    else if (bosshealth == 7000)
+        return 7;
+    else if (bosshealth == 6000)
+        return 6;
+    else if (bosshealth == 5000)
+        return 5;
+    else if (bosshealth == 4000)
+        return 4;
+    else if (bosshealth == 3000)
+        return 3;
+    else if (bosshealth == 2000)
+        return 2;
+    else if (bosshealth == 1000)
+        return 1;
+    else if (bosshealth == 0)
+        return 0;
+
+    return -1;
+}
+void boss_level(RenderWindow& window,Clock&gameclock,float&deltatime,float&delay)
+{
+    //window.setFramerateLimit(120);
+    // Variables
+    float attackdelay = 0.1;
+    int arr_index = 10;
+    int x = 0;
+    level = false;
+    // Structs
+    // 
+    // Sonic
+    player sonic;
+    sonic.player.setTextureRect(IntRect(48.87, 0, 48.87, 43));
+    boss eggman;
+    eggman.sprite.setTextureRect(IntRect(0, 0, 73.3333, 73.3333));
+
+    // Velocities
+    Vector2f Velocity;
+    Vector2f Velocity2;
+
+    //Textures
+    Texture bossbackgroundTexture;
+    Texture bossgroundTexture;
+    Texture liveTex;
+    Texture overtex;
+
+    //Sprites
+    Sprite lives[5];
+    Sprite gameover1;
+
+    //health bar init
+    Texture healthbartex;
+    init_health_bar();
+
+    RectangleShape eggman_healthBar(Vector2f(700.f, 70.f));
+    eggman_healthBar.setScale(1.f, 1.f);
+    eggman_healthBar.setOrigin(eggman_healthBar.getPosition().x / 2, eggman_healthBar.getPosition().y / 2);
+    healthbartex = healthbar[arr_index];
+    eggman_healthBar.setTexture(&healthbartex);
+    eggman_healthBar.setPosition(40, 100);
+
+    // Loading From Files
+    sonic.sonicTex.loadFromFile("Images/sonic.png");
+    bossbackgroundTexture.loadFromFile("Images/boss_level_background.jpg");
+    bossgroundTexture.loadFromFile("Images/metal_ground.png");
+    eggman.bosstex.loadFromFile("Images/eggman.png");
+    liveTex.loadFromFile("Images/Lives.png");
+    overtex.loadFromFile("Images/gameover.png");
+    // Setting Textures
+    sonic.player.setTexture(sonic.sonicTex);
+    eggman.sprite.setTexture(eggman.bosstex);
+    for (int i = 0; i < 5; i++)
+    {
+        lives[i].setTexture(liveTex);
+    }
+    gameover1.setTexture(overtex);
+
+
+    // Position
+    sonic.player.setPosition(500, 900);
+    sonic.PlayerColl.setPosition(500, 720);
+    eggman.sprite.setPosition(1500, 600);
+    for (int i = 0, j = 63; i < 5; i++)
+    {
+        lives[i].setPosition(40 + (j * i), 1000);
+    }
+    gameover1.setPosition(Vector2f(40, 0));
+
+    // Scaling and sizing
+    sonic.player.setScale(Vector2f(2.f, 2.f));
+    sonic.PlayerColl.setSize(Vector2f(45.f, 70.f));
+
+    eggman.sprite.setScale(4, 4);
+    eggman.coll.setSize(Vector2f(180, 180));
+    for (int i = 0; i < 5; i++)
+        lives[i].setScale(0.1, 0.1);
+
+
+    // Background
+    Sprite bossbackground;
+    bossbackground.setScale(1.25, 1.05);
+    bossbackground.setTexture(bossbackgroundTexture);
+    bossbackground.setTextureRect(IntRect(0, 0, 1920, 960));
+    bossbackground.setPosition(Vector2f(0, 0));
+    bossbackgroundTexture.setRepeated(false);
+
+
+    // Ground
+    Sprite bossground;
+    bossground.setTexture(bossgroundTexture);
+    bossground.setTextureRect(IntRect(0, 0, 128 * 50, 128));
+    bossground.setPosition(0, 952);
+    bossgroundTexture.setRepeated(true);
+
+
+    //borders
+    RectangleShape border1(Vector2f(10, 1000));
+    RectangleShape border2(Vector2f(10, 1000));
+
+    border1.setPosition(0, 0);
+    border2.setPosition(1890, 0);
+
+
+
+    //========//
+    // Sounds //
+    //========//
+
+    // sounds buffer
+    SoundBuffer jumpsoundbuffer;
+    SoundBuffer deathsoundbuffer;
+    SoundBuffer oversoundBuffer;
+    
+    // sounds
+    Sound jumpsound;
+    Sound deathsound;
+    Sound gameover5;
+    //set buffer
+    jumpsound.setBuffer(jumpsoundbuffer);
+    deathsound.setBuffer(deathsoundbuffer);
+    gameover5.setBuffer(oversoundBuffer);
+    // load sounds
+    jumpsoundbuffer.loadFromFile("Sounds/jump.WAV");
+    deathsoundbuffer.loadFromFile("Sounds/death.WAV");
+    oversoundBuffer.loadFromFile("Sounds/GameOver.flac");
+
+
+    //Music bossmusic;
+   // bossmusic.openFromFile("Sounds/boss.WAV");
+    // view
+    View cam(Vector2f(0.f, 0.f), Vector2f(1920.f, 1080.f));
+
+    //game loop
+    while (window.isOpen())
+    {
+        //veiw
+        if(!level)
+        {
+            cam.setCenter(Vector2f(1000, 600));
+            window.setView(cam);
+        }
+
+
+        gameclock.restart();
+        Event event;
+        //events loop
+        while (window.pollEvent(event))
+        {
+            if (event.type == Event::Closed)
+            {
+                window.close();
+            }
+            if (event.type == Event::KeyPressed)
+            {
+                if ((event.key.code == Keyboard::Space) && sonic.isground && !sonic.isdead)
+                {
+                    sonic.Velocity.y = -30;
+                    sonic.isground = false;
+                    jumpsound.play();
+
+                }
+            }
+
+            if (event.type == Event::KeyReleased)
+            {
+                if ((event.key.code == Keyboard::A))
+                {
+                    sonic.animleft = 0;
+                    Velocity2.x = 0;
+                    sonic.Velocity.x = 0;
+                    Velocity.x = 0;
+                    sonic.acc = 0;
+                }
+                if ((event.key.code == Keyboard::D))
+                {
+                    sonic.animright = 0;
+                    sonic.Velocity.x = 0;
+                    Velocity.x = 0;
+                    Velocity2.x = 0;
+                    sonic.acc = 0;
+                }
+                x = sonic.player.getPosition().x;
+                if ((event.key.code == Keyboard::Escape) && !level)
+                {
+                    x = sonic.player.getPosition().x;
+                    ispaused = true;
+                    pausemenufunc(window, sonic.player, x, sonic.check[2]);
+                    if (restart == true)
+                    {
+                        boss_level(window, gameclock, deltatime, delay);
+                    }
+                    if (pagenumber == 0)
+                        return;
+                }
+            }
+        }
+
+        sonic.hitLeft = false;
+        sonic.hitRight = false;
+
+
+        //============//
+        // velocities //
+        //============//
+
+
+        sonic.player.move(sonic.Velocity.x, sonic.Velocity.y);
+        eggman.sprite.move(eggman.Velocity.x, eggman.Velocity.y);
+        //collector.move(Velocity.x, Velocity.y);
+
+
+        //=======//
+        // sonic //
+        //=======//
+        
+
+        //sonic physics& animation
+        //===============================//
+
+        if (!sonic.isdead)
+        {
+            if(!eggman.isdead)
+            {
+                for (int i = 0; i < 65; i++)
+                {
+                    //if sonic on the ground:
+                    if (sonic.player.getGlobalBounds().intersects(bossground.getGlobalBounds()))
+                    {
+                        sonic.player.setPosition(sonic.player.getPosition().x, bossground.getPosition().y - 75);
+                        sonic.Velocity.y = -0.01;
+                        sonic.isground = true;
+                    }
+                    //if sonic is above the ground:
+                    else
+                    {
+                        //gravity:
+                        sonic.Velocity.y += 0.02;
+                    }
+
+                }
+                
+                //jump animation 
+                if (!sonic.isground && !sonic.isdead)
+                {
+                    animate_sprite(sonic.player, 16, 2 * 59.4, 48.87, 46, sonic.jumpanim, delay, deltatime, sonic.timer, 0);
+                }
+
+                //move left & right
+                if (!sonic.slidingRight && !sonic.slidingLeft && !sonic.PlayerColl.getGlobalBounds().intersects(eggman.coll.getGlobalBounds()))
+                {
+                    if (Keyboard::isKeyPressed(Keyboard::A) && !Keyboard::isKeyPressed(Keyboard::S))
+                    {
+                        move_left(sonic.player, sonic.Velocity, Velocity, Velocity2, sonic.acc, sonic.animleft, deltatime, sonic.timer, sonic.isground, sonic.isdead, sonic.check[2]);
+                    }
+                    else if (Keyboard::isKeyPressed(Keyboard::D) && !Keyboard::isKeyPressed(Keyboard::S))
+                    {
+                        move_right(sonic.player, sonic.Velocity, Velocity, Velocity2, sonic.acc, sonic.animright, deltatime, sonic.timer, sonic.isground, sonic.isdead, sonic.check[2]);
+                    }
+                }
+            }
+
+            // idle animation
+            if (sonic.isground && !(Keyboard::isKeyPressed(Keyboard::D)) && !(Keyboard::isKeyPressed(Keyboard::S)) && !(Keyboard::isKeyPressed(Keyboard::A)) && !(Keyboard::isKeyPressed(Keyboard::Space)))
+            {
+                animate_sprite(sonic.player, 8, 0, 48.87, 41, sonic.idleanim, delay, deltatime, sonic.timer, 0);
+            }
+
+            //attack
+            if (Keyboard::isKeyPressed(Keyboard::S))
+            {
+
+                animate_sprite(sonic.player, 2, 2 * 59.4, 48.8, 46, sonic.attackanimInd, attackdelay, deltatime, sonic.timer, 0);
+
+                if (Keyboard::isKeyPressed(Keyboard::A))
+                {
+                    sonic.Velocity.x = -20;
+                }
+                else if (Keyboard::isKeyPressed(Keyboard::D))
+                {
+
+                    sonic.Velocity.x = 20;
+                }
+            }
+
+
+            //boss fight
+
+            //gravity
+            if (eggman.sprite.getGlobalBounds().intersects(bossground.getGlobalBounds()))
+            {
+                eggman.sprite.setPosition(eggman.sprite.getPosition().x, bossground.getPosition().y - 235);
+                eggman.Velocity.y = 0.01;
+                eggman.isground = true;
+            }
+            else
+            {
+                eggman.Velocity.y += 0.6;
+            }
+
+            if (!eggman.isdead)
+            {
+                //collision with sonic
+                if (sonic.PlayerColl.getGlobalBounds().intersects(eggman.coll.getGlobalBounds()))
+                {
+                    if (sonic.PlayerColl.getPosition().y + 70 <= eggman.coll.getPosition().y + 75)
+                    {
+                        sonic.lives--;
+                        sonic.isdead = true;
+                        sonic.isground = false;
+                        sonic.Velocity.y = -15;
+                        deathsound.play();
+                    }
+
+
+                    else if (sonic.PlayerColl.getPosition().x + 45 >= eggman.coll.getPosition().x && sonic.PlayerColl.getPosition().x <= eggman.coll.getPosition().x + 90)
+                    {
+                        if (eggman.isground && Keyboard::isKeyPressed(Keyboard::S))
+                        {
+                            if (sonic.PlayerColl.getPosition().x + 45 > eggman.coll.getPosition().x - 200)
+                            {
+                                eggman.Velocity.y = -20;
+                                eggman.isground = false;
+                            }
+                        }
+
+
+                        sonic.hitLeft = true;
+                        sonic.slidingLeft = true;
+                        sonic.Velocity.x = -50;
+
+
+                        if (Keyboard::isKeyPressed(Keyboard::S))
+                        {
+                            sonic.Velocity.x = -25;
+                            eggman.health -= 50;
+                        }
+                        arr_index = update_health_bar(eggman.health);
+                        if (arr_index != -1)
+                        {
+                            healthbartex = healthbar[arr_index];
+                            eggman_healthBar.setTexture(&healthbartex);
+                        }
+                    }
+
+                    else if (sonic.PlayerColl.getPosition().x >= eggman.coll.getPosition().x + 90)
+                    {
+                        if (eggman.isground && Keyboard::isKeyPressed(Keyboard::S))
+                        {
+                            if (sonic.PlayerColl.getPosition().x < eggman.coll.getPosition().x + 350)
+                            {
+                                eggman.Velocity.y = -20;
+                                eggman.isground = false;
+                            }
+                        }
+
+
+                        sonic.hitRight = true;
+                        sonic.slidingRight = true;
+                        sonic.Velocity.x = 50;
+
+
+                        if (Keyboard::isKeyPressed(Keyboard::S))
+                        {
+                            sonic.Velocity.x = 25;
+                            eggman.health -= 50;
+                        }
+                        arr_index = update_health_bar(eggman.health);
+                        if (arr_index != -1)
+                        {
+                            healthbartex = healthbar[arr_index];
+                            eggman_healthBar.setTexture(&healthbartex);
+                        }
+                    }
+                }
+
+                if (!sonic.PlayerColl.getGlobalBounds().intersects(eggman.coll.getGlobalBounds()))
+                {
+                    if (sonic.Velocity.x != 0)
+                    {
+                        if (sonic.Velocity.x < 0)
+                        {
+                            sonic.Velocity.x += 2;
+                        }
+                        if (sonic.Velocity.x > 0)
+                        {
+                            sonic.Velocity.x -= 2;
+                        }
+                    }
+                    else
+                    {
+                        sonic.slidingLeft = false;
+                        sonic.slidingRight = false;
+                    }
+                }
+
+
+                //dodgign sonic
+                if (Keyboard::isKeyPressed(Keyboard::S) && sonic.PlayerColl.getPosition().x + 45 <= eggman.coll.getPosition().x + 90 && eggman.health <= 1000)
+                {
+                    eggman.sprite.setOrigin(eggman.sprite.getLocalBounds().width, 0);
+                    eggman.sprite.setScale(-4, 4);
+                    eggman.Velocity.x = 10;
+                    animate_sprite(eggman.sprite, 2, 0, 73.333, 63, eggman.bossanimInd, eggman.bossdelay, deltatime, eggman.bosstimer, 1);
+                }
+                else if (Keyboard::isKeyPressed(Keyboard::S) && sonic.PlayerColl.getPosition().x >= eggman.coll.getPosition().x + 90 && eggman.health <= 1000)
+                {
+                    eggman.sprite.setOrigin(0, 0);
+                    eggman.sprite.setScale(4, 4);
+                    eggman.Velocity.x = -10;
+                    animate_sprite(eggman.sprite, 2, 0, 73.333, 63, eggman.bossanimInd, eggman.bossdelay, deltatime, eggman.bosstimer, 1);
+                }
+
+
+                //attacking sonic
+                if (eggman.health > 1000 || !Keyboard::isKeyPressed(Keyboard::S))
+                {
+                    if (sonic.PlayerColl.getPosition().x + 45 <= eggman.coll.getPosition().x + 90)
+                    {
+                        eggman.sprite.setOrigin(0, 0);
+                        eggman.sprite.setScale(4, 4);
+                        eggman.Velocity.x = -6;
+                        animate_sprite(eggman.sprite, 2, 0, 73.333, 63, eggman.bossanimInd, eggman.bossdelay, deltatime, eggman.bosstimer, 1);
+                    }
+                    else if (sonic.PlayerColl.getPosition().x >= eggman.coll.getPosition().x + 90)
+                    {
+                        eggman.sprite.setOrigin(eggman.sprite.getLocalBounds().width, 0);
+                        eggman.sprite.setScale(-4, 4);
+                        eggman.Velocity.x = 6;
+                        animate_sprite(eggman.sprite, 2, 0, 73.333, 63, eggman.bossanimInd, eggman.bossdelay, deltatime, eggman.bosstimer, 1);
+                    }
+                }
+
+
+                if (eggman.health <= 0)
+                {
+                    eggman.isdead = true;
+                }
+            }
+        }
+
+        //bossmusic.play();
+
+
+        // sonic death
+        if (sonic.isdead && !sonic.isground)
+        {
+            animate_sprite(sonic.player, 2, 4 * 55, 45.5, 50, sonic.deadanim, sonic.deathdelay, deltatime, sonic.timer, 6);
+            sonic.Velocity.y += 0.5;
+            sonic.Velocity.x = 0;
+            Velocity.x = 0;
+            Velocity2.x = 0;
+        }
+
+        // eggman death
+        if (eggman.isdead && !sonic.isdead)
+        {
+            //bossmusic.stop();
+            if (eggman.bosstimer < 0)
+            {
+                eggman.bossanimInd++;
+                if (eggman.bossanimInd > 4)
+                    eggman.bossanimInd = 4;
+                eggman.sprite.setTextureRect(IntRect((eggman.bossanimInd * 70), 2 * 70, 70, 63));
+
+                eggman.bosstimer = 1.25;
+            }
+            else
+            {
+                eggman.bosstimer -= deltatime;
+            }
+            eggman.Velocity.x = 0;
+        }
+
+
+
+        //===================//
+        //       map         //
+        //===================//
+
+
+        //display movement
+        //==============================//
+
+        //respawn sonic & collector
+        if (sonic.PlayerColl.getPosition().y > window.getSize().y &&sonic.lives>0)
+        {
+            sonic.isdead = false;
+            sonic.isground = true;
+            sonic.player.setPosition(500, 900);
+            sonic.Velocity.x = 0;
+            sonic.acc = 0;
+            sonic.animleft = 0;
+            sonic.animright = 0;
+        }
+        if (sonic.PlayerColl.getPosition().y > window.getSize().y && sonic.lives <= 0 && !sonic.isground)
+        {
+            gameover = true;
+           // bossmusic.stop();
+            deathsound.pause();
+            gameover5.play();
+            sonic.isground = true;
+        }
+
+
+        //borders of the level
+        //==================================//
+        if (sonic.player.getGlobalBounds().intersects(border1.getGlobalBounds()))
+        {
+            sonic.player.setPosition(sonic.player.getPosition().x + 20, sonic.player.getPosition().y);
+        }
+        if (sonic.player.getGlobalBounds().intersects(border2.getGlobalBounds()))
+        {
+            sonic.player.setPosition(sonic.player.getPosition().x - 20, sonic.player.getPosition().y);
+        }
+        if (eggman.sprite.getGlobalBounds().intersects(border1.getGlobalBounds()))
+        {
+            eggman.sprite.setPosition(eggman.sprite.getPosition().x + 20, eggman.sprite.getPosition().y);
+        }
+        if (eggman.sprite.getGlobalBounds().intersects(border2.getGlobalBounds()))
+        {
+            eggman.sprite.setPosition(eggman.sprite.getPosition().x - 20, eggman.sprite.getPosition().y);
+        }
+
+
+        //position of collision rectangles
+        //====================================//
+        sonic.PlayerColl.setPosition(sonic.player.getPosition().x - 70, sonic.player.getPosition().y + 10);
+        eggman.coll.setPosition(eggman.sprite.getPosition().x + 70, eggman.sprite.getPosition().y + 70);
+
+
+
+        //=======================================================================================================================================================//
+
+
+        //Update
+        window.clear();
+
+
+        //Draw
+        window.draw(bossbackground);
+        window.draw(bossground);
+        window.draw(eggman.sprite);
+        for (int i = 0; i < sonic.lives; i++)
+            window.draw(lives[i]);
+        window.draw(sonic.player);
+        window.draw(eggman_healthBar);
+        if (gameover)
+        {
+            window.draw(gameover1);
+        }
+
+        //Display
+        window.display();
+        deltatime = gameclock.getElapsedTime().asSeconds();
+
+
+        //=======================================================================================================================================================//
     }
 }
